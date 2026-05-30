@@ -8,7 +8,8 @@ const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const app      = express();
 const PORT     = process.env.PORT || 3004;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
-const DB_FILE  = path.join(__dirname, 'bookings.json');
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DB_FILE  = path.join(DATA_DIR, 'bookings.json');
 
 /* ── Mercado Pago ─────────────────────────────────────────────────────────── */
 const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
