@@ -316,6 +316,73 @@ app.delete('/api/admin/blocked/:date', adminLimiter, adminAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ── Calendario ICS ───────────────────────────────────────────────────────── */
+const SERVICE_DURATION = {
+  'Consulta Express':       30,
+  'Asesoría Personalizada': 60,
+  'Revisión de Productos':  30
+};
+
+function calToken() {
+  return crypto.createHash('sha256').update((process.env.ADMIN_PASSWORD || '') + 'ics').digest('hex').slice(0, 20);
+}
+
+function toICSDate(date, time, offsetMins = 0) {
+  const [y, m, d] = date.split('-').map(Number);
+  const [h, min]  = time.split(':').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d, h, min + offsetMins));
+  return dt.toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+}
+
+function escapeICS(str) {
+  return String(str).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+}
+
+app.get('/api/calendar.ics', (req, res) => {
+  if (req.query.token !== calToken()) return res.status(401).send('No autorizado');
+
+  const bookings = getBookings().filter(b => b.status === 'confirmado');
+  const events   = bookings.map(b => {
+    const dur   = SERVICE_DURATION[b.service] || 60;
+    const start = toICSDate(b.date, b.time);
+    const end   = toICSDate(b.date, b.time, dur);
+    return [
+      'BEGIN:VEVENT',
+      `UID:${b.id}@bosskinlab.com`,
+      `DTSTART:${start}`,
+      `DTEND:${end}`,
+      `SUMMARY:${escapeICS(b.service)} — ${escapeICS(b.name)}`,
+      `DESCRIPTION:${escapeICS(b.name)}\\nEmail: ${escapeICS(b.email)}\\nTeléfono: ${escapeICS(b.phone)}`,
+      `LOCATION:Videollamada`,
+      `STATUS:CONFIRMED`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,
+      'END:VEVENT'
+    ].join('\r\n');
+  }).join('\r\n');
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//BOSSKIN//Reservas//ES',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:BOSSKIN Reservas',
+    'X-WR-TIMEZONE:America/Santiago',
+    'X-WR-CALDESC:Asesorías confirmadas — Barbara Villalobos',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+    events,
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', 'inline; filename="bosskin-reservas.ics"');
+  res.send(ics);
+});
+
+app.get('/api/admin/calendar-url', adminLimiter, adminAuth, (req, res) => {
+  res.json({ url: `${BASE_URL}/api/calendar.ics?token=${calToken()}` });
+});
+
 /* ── 404 ──────────────────────────────────────────────────────────────────── */
 app.use('/api', (req, res) => res.status(404).json({ error: 'Endpoint no encontrado' }));
 

@@ -169,6 +169,9 @@
       <input class="filter-inp" type="search" id="filter-q" placeholder="Buscar nombre o email…" oninput="renderTable()" style="min-width:180px">
       <button class="btn-sm" onclick="clearFilters()">Limpiar filtros</button>
       <button class="btn-sm accent" onclick="exportCSV()">Exportar CSV</button>
+      <button class="btn-sm" onclick="copyCalendarUrl()" id="btn-cal">
+        📅 Copiar link calendario
+      </button>
     </div>
 
     <!-- Bloqueo de fechas -->
@@ -354,6 +357,16 @@
     a.href = URL.createObjectURL(blob);
     a.download = `boosskin_reservas_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+  }
+
+  /* ── Calendario ICS ── */
+  async function copyCalendarUrl() {
+    const res  = await fetch('/api/admin/calendar-url', { headers: authHeader() });
+    const data = await res.json();
+    await navigator.clipboard.writeText(data.url);
+    const btn = document.getElementById('btn-cal');
+    btn.textContent = '✓ Link copiado';
+    setTimeout(() => btn.textContent = '📅 Copiar link calendario', 2500);
   }
 
   /* ── Bloqueo de fechas ── */
