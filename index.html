@@ -295,8 +295,40 @@
     .review-av { width: 36px; height: 36px; border-radius: 50%; background: var(--emerald); display: flex; align-items: center; justify-content: center; font-family: var(--font-t); font-size: .9rem; font-weight: 700; color: var(--white); flex-shrink: 0; }
     .review-name { font-weight: 600; font-size: .84rem; color: var(--black); }
     .review-loc  { font-size: .73rem; color: var(--g-mid); }
-    @media (max-width: 900px)  { .reviews-grid { grid-template-columns: repeat(2,1fr); } }
-    @media (max-width: 540px)  { .reviews-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) {
+      .reviews-grid {
+        display: flex !important;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 14px;
+        padding: 8px 24px 24px;
+        margin: 48px -24px 0;
+        max-width: none;
+        align-items: stretch;
+        cursor: grab;
+      }
+      .reviews-grid::-webkit-scrollbar { display: none; }
+      .reviews-grid:active { cursor: grabbing; }
+      .review-card {
+        flex: 0 0 78vw;
+        max-width: 300px;
+        scroll-snap-align: center;
+        opacity: .6;
+        transform: scale(.95);
+        transition: opacity .45s var(--ease), transform .45s var(--ease), box-shadow .45s;
+      }
+      .review-card.rv-active {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 16px 48px rgba(0,0,0,.1);
+        border-color: var(--emerald-lt);
+      }
+      .rv-dots { display: flex; justify-content: center; align-items: center; gap: 7px; margin-top: 20px; }
+      .rv-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(26,107,74,.25); transition: all .35s var(--ease); }
+      .rv-dot.rv-dot-active { width: 22px; border-radius: 4px; background: var(--emerald); }
+    }
 
     /* ══ CTA ══════════════════════════════════════════════════════════════ */
     #cta { background: #0e1612; text-align: center; position: relative; overflow: hidden; border-top: 1px solid rgba(26,107,74,.12); }
@@ -394,6 +426,18 @@
       .footer-grid { grid-template-columns: 1fr; gap: 32px; }
       .footer-btm { flex-direction: column; gap: 12px; text-align: center; }
     }
+    /* ══ SERVICES SLIDE ANIMATION ════════════════════════════════════════════ */
+    @keyframes slideFromLeft   { from { opacity:0; transform: translateX(-70px); } to { opacity:1; transform: translateX(0); } }
+    @keyframes slideFromBottom { from { opacity:0; transform: translateY(60px);  } to { opacity:1; transform: translateY(0); } }
+    @keyframes slideFromRight  { from { opacity:0; transform: translateX(70px);  } to { opacity:1; transform: translateX(0); } }
+
+    .svc-slide-left   { opacity:0; }
+    .svc-slide-center { opacity:0; }
+    .svc-slide-right  { opacity:0; }
+    .svc-slide-left.svc-in   { animation: slideFromLeft   .75s var(--ease) both; }
+    .svc-slide-center.svc-in { animation: slideFromBottom .75s var(--ease) .15s both; }
+    .svc-slide-right.svc-in  { animation: slideFromRight  .75s var(--ease) .3s  both; }
+
     /* ══ EXTRA ANIMATIONS ════════════════════════════════════════════════════ */
 
 
@@ -668,7 +712,7 @@
     </div>
     <div class="services-grid">
 
-      <div class="svc-card rv d1">
+      <div class="svc-card svc-slide-left">
         <div class="svc-img"><img src="images/consulta-express.jpg" alt="Consulta Express"></div>
         <div class="svc-name">Consulta Express</div>
         <div class="svc-desc">Sesión de 30 minutos para resolver tus dudas puntuales sobre un producto, una reacción o cómo armar tu primera rutina.</div>
@@ -680,7 +724,7 @@
         <a href="#" onclick="openBooking('express');return false;" class="btn btn-ol" style="width:fit-content;margin-top:auto">Agendar →</a>
       </div>
 
-      <div class="svc-card feat rv d2">
+      <div class="svc-card feat svc-slide-center">
         <div class="svc-img"><img src="images/asesoria-personalizada.jpg" alt="Asesoría Personalizada"></div>
         <div class="feat-badge">Más elegido</div>
         <div class="svc-name">Asesoría Personalizada</div>
@@ -695,7 +739,7 @@
         <a href="#" class="btn btn-em" style="width:fit-content;margin-top:auto" onclick="openBooking('asesoria');return false;">Agendar ahora →</a>
       </div>
 
-      <div class="svc-card rv d3">
+      <div class="svc-card svc-slide-right">
         <div class="svc-img"><img src="images/revision-productos.jpg" alt="Revisión de Productos"></div>
         <div class="svc-name">Revisión de Productos</div>
         <div class="svc-desc">Revisamos juntas los productos que ya tienes o planeas comprar. Te digo qué funciona, en qué orden usarlos y qué evitar.</div>
@@ -1180,57 +1224,58 @@
     }
   }
 
-  /* ── Mobile services carousel ───────────────────────────────────────── */
-  function initCarousel() {
-    if (window.innerWidth > 900) return;
-    const grid  = document.querySelector('.services-grid');
-    const cards = Array.from(grid.querySelectorAll('.svc-card'));
-    if (!cards.length) return;
+  /* ── Services slide animation ───────────────────────────────────────── */
+  const slideObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('svc-in');
+        slideObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: .15 });
+  document.querySelectorAll('.svc-slide-left, .svc-slide-center, .svc-slide-right').forEach(el => slideObs.observe(el));
 
-    // Dots
+  /* ── Generic carousel factory ────────────────────────────────────────── */
+  function initCarouselOn(grid, cardSel, activeClass, dotClass, dotActiveClass) {
+    const cards = Array.from(grid.querySelectorAll(cardSel));
+    if (!cards.length) return;
     const dotsWrap = document.createElement('div');
-    dotsWrap.className = 'svc-dots';
-    cards.forEach((_, i) => {
+    dotsWrap.className = dotClass.replace('.','') + 's';
+    dotsWrap.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:7px;margin-top:20px';
+    cards.forEach(() => {
       const d = document.createElement('div');
-      d.className = 'svc-dot';
+      d.className = dotClass.replace('.','');
       dotsWrap.appendChild(d);
     });
     grid.parentNode.insertBefore(dotsWrap, grid.nextSibling);
     const dots = Array.from(dotsWrap.children);
-
     function getActive() {
       const cx = grid.scrollLeft + grid.offsetWidth / 2;
       let best = 0, bestDist = Infinity;
-      cards.forEach((c, i) => {
-        const dist = Math.abs(c.offsetLeft + c.offsetWidth / 2 - cx);
-        if (dist < bestDist) { bestDist = dist; best = i; }
-      });
+      cards.forEach((c, i) => { const dist = Math.abs(c.offsetLeft + c.offsetWidth / 2 - cx); if (dist < bestDist) { bestDist = dist; best = i; } });
       return best;
     }
-
     function update() {
       const idx = getActive();
-      cards.forEach((c, i) => c.classList.toggle('svc-active', i === idx));
-      dots.forEach((d, i) => d.classList.toggle('svc-dot-active', i === idx));
+      cards.forEach((c, i) => c.classList.toggle(activeClass, i === idx));
+      dots.forEach((d, i) => d.classList.toggle(dotActiveClass, i === idx));
     }
-
-    // Initial scroll to center first card
-    const firstCard = cards[0];
-    grid.scrollLeft = firstCard.offsetLeft - (grid.offsetWidth - firstCard.offsetWidth) / 2;
+    grid.scrollLeft = cards[0].offsetLeft - (grid.offsetWidth - cards[0].offsetWidth) / 2;
     update();
-
     grid.addEventListener('scroll', update, { passive: true });
-
-    // Drag to scroll
     let isDown = false, startX, scrollStart;
-    grid.addEventListener('mousedown', e => { isDown = true; startX = e.pageX - grid.offsetLeft; scrollStart = grid.scrollLeft; });
-    grid.addEventListener('mouseleave', () => isDown = false);
-    grid.addEventListener('mouseup', () => isDown = false);
-    grid.addEventListener('mousemove', e => {
-      if (!isDown) return;
-      e.preventDefault();
-      grid.scrollLeft = scrollStart - (e.pageX - grid.offsetLeft - startX);
-    });
+    grid.addEventListener('mousedown', e => { isDown = true; startX = e.pageX; scrollStart = grid.scrollLeft; });
+    window.addEventListener('mouseup', () => isDown = false);
+    grid.addEventListener('mousemove', e => { if (!isDown) return; e.preventDefault(); grid.scrollLeft = scrollStart - (e.pageX - startX); });
+  }
+
+  /* ── Mobile carousels ────────────────────────────────────────────────── */
+  function initCarousel() {
+    if (window.innerWidth > 900) return;
+    const svcGrid = document.querySelector('.services-grid');
+    if (svcGrid) initCarouselOn(svcGrid, '.svc-card', 'svc-active', '.svc-dot', 'svc-dot-active');
+    const rvGrid = document.querySelector('.reviews-grid');
+    if (rvGrid) initCarouselOn(rvGrid, '.review-card', 'rv-active', '.rv-dot', 'rv-dot-active');
   }
 
   document.addEventListener('DOMContentLoaded', initCarousel);
