@@ -149,18 +149,17 @@
       .btn-logout { font-size: .75rem; padding: 6px 10px; }
       .tb-date { display: none; }
 
-      /* Stats scroll horizontal */
+      /* Stats grid 2x2 */
       .stats {
-        display: flex !important;
-        overflow-x: auto;
-        gap: 12px;
-        padding: 4px 4px 8px;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
       }
-      .stats::-webkit-scrollbar { display: none; }
-      .stat-card { flex: 0 0 140px; min-width: 0; }
-      .sc-val { font-size: 1.8rem; }
+      .stat-card { padding: 16px; border-radius: 12px; }
+      .sc-label { font-size: .67rem; margin-bottom: 6px; }
+      .sc-val { font-size: 1.9rem; }
+      .sc-sub { font-size: .72rem; }
 
       /* Bottom nav */
       .m-bottom-nav {
