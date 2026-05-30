@@ -187,35 +187,59 @@
       .m-tab { display: none; }
       .m-tab.active { display: block; }
 
+      /* Próxima sesión banner */
+      .m-next-banner {
+        background: linear-gradient(135deg, #0e2318 0%, #1a3d28 100%);
+        border: 1px solid rgba(26,107,74,.4); border-radius: 16px;
+        padding: 18px; margin-bottom: 20px;
+      }
+      .m-next-label { font-size: .7rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--emerald); margin-bottom: 8px; }
+      .m-next-name  { font-family: var(--font-t); font-size: 1.2rem; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+      .m-next-info  { font-size: .83rem; color: rgba(255,255,255,.6); }
+      .m-next-actions { display: flex; gap: 8px; margin-top: 14px; }
+      .m-next-btn { flex: 1; background: rgba(26,107,74,.2); border: 1px solid rgba(26,107,74,.35); color: var(--emerald-lt); font-family: var(--font-b); font-size: .78rem; font-weight: 500; padding: 9px; border-radius: 8px; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background .2s; text-decoration: none; }
+      .m-next-btn:hover { background: rgba(26,107,74,.35); }
+
+      /* Pendientes section */
+      .m-pending-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+      .m-pending-badge { background: rgba(245,158,11,.15); color: #fbbf24; border: 1px solid rgba(245,158,11,.3); border-radius: 100px; font-size: .72rem; font-weight: 700; padding: 2px 10px; }
+      .m-pending-title { font-weight: 600; font-size: .9rem; color: var(--white); }
+      .m-pending-note { font-size: .75rem; color: var(--g-mid); margin-bottom: 12px; line-height: 1.5; }
+
+      /* Section header */
+      .m-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+
       /* Mobile booking cards */
-      .m-cards { display: flex; flex-direction: column; gap: 12px; }
+      .m-cards { display: flex; flex-direction: column; gap: 10px; }
       .m-card {
         background: var(--card); border: 1px solid rgba(255,255,255,.07);
         border-radius: 14px; overflow: hidden;
         transition: transform .2s var(--ease);
         animation: mCardIn .35s var(--ease) both;
       }
+      .m-card.pending-card { border-color: rgba(245,158,11,.2); }
       @keyframes mCardIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
       .m-card-head {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 14px 16px 10px;
+        display: flex; justify-content: space-between; align-items: flex-start;
+        padding: 14px 16px 8px; gap: 10px;
       }
-      .m-card-name { font-weight: 600; font-size: .95rem; color: var(--white); }
-      .m-card-body { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 8px; }
-      .m-card-row  { display: flex; align-items: center; gap: 8px; font-size: .82rem; color: var(--g-light); }
+      .m-card-name { font-weight: 600; font-size: .93rem; color: var(--white); }
+      .m-card-service { font-size: .73rem; color: var(--g-mid); margin-top: 2px; }
+      .m-card-body { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+      .m-card-row  { display: flex; align-items: center; gap: 8px; font-size: .81rem; color: var(--g-light); }
       .m-card-row svg { flex-shrink: 0; color: var(--emerald); }
-      .m-card-actions {
-        display: flex; border-top: 1px solid rgba(255,255,255,.06);
-      }
+      .m-card-row a { color: var(--g-light); text-decoration: none; }
+      .m-card-actions { display: flex; border-top: 1px solid rgba(255,255,255,.06); }
       .m-act-btn {
         flex: 1; background: none; border: none; color: var(--g-mid);
-        font-family: var(--font-b); font-size: .82rem; font-weight: 500;
-        padding: 12px; cursor: pointer; transition: background .2s, color .2s;
+        font-family: var(--font-b); font-size: .8rem; font-weight: 500;
+        padding: 12px 8px; cursor: pointer; transition: background .2s, color .2s;
       }
-      .m-act-btn:hover { background: rgba(255,255,255,.05); }
-      .m-act-btn.confirm { color: var(--emerald-lt); }
-      .m-act-btn.confirm:hover { background: rgba(26,107,74,.1); }
-      .m-act-btn.del:hover { background: rgba(224,82,82,.08); color: #f87171; }
+      .m-act-btn:active { background: rgba(255,255,255,.05); }
+      .m-act-btn.confirm { color: #fbbf24; font-weight: 600; }
+      .m-act-btn.confirm:active { background: rgba(245,158,11,.08); }
+      .m-act-btn.wsp { color: #25D366; }
+      .m-act-btn.del { color: rgba(255,255,255,.3); }
       .m-act-btn + .m-act-btn { border-left: 1px solid rgba(255,255,255,.06); }
 
       /* Mobile section titles */
@@ -337,17 +361,29 @@
 
 <!-- ══ MOBILE TABS ══════════════════════════════════════════════════════════ -->
 
-<!-- Tab: Reservas -->
+<!-- Tab: Inicio -->
 <div class="m-tab active" id="m-tab-reservas" style="display:none">
-  <div class="m-section-title">Reservas</div>
+
+  <!-- Próxima sesión -->
+  <div id="m-next-session"></div>
+
+  <!-- Pendientes de acción -->
+  <div id="m-pending-section"></div>
+
+  <!-- Todas las reservas -->
+  <div class="m-section-header">
+    <span class="m-section-title" style="margin-bottom:0">Todas las reservas</span>
+    <span id="m-count" style="font-size:.78rem;color:var(--g-mid)"></span>
+  </div>
   <div class="m-search">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="search" id="m-search-q" placeholder="Buscar cliente…" oninput="renderMobileCards()">
+    <input type="search" id="m-search-q" placeholder="Buscar por nombre o email…" oninput="renderMobileCards()">
   </div>
-  <div class="m-filters" id="m-filters">
+  <div class="m-filters">
     <div class="m-filter-chip active" data-status="" onclick="setMobileFilter(this,'')">Todas</div>
-    <div class="m-filter-chip" data-status="confirmado" onclick="setMobileFilter(this,'confirmado')">✓ Confirmadas</div>
-    <div class="m-filter-chip" data-status="pendiente" onclick="setMobileFilter(this,'pendiente')">⏳ Pendientes</div>
+    <div class="m-filter-chip" data-status="hoy" onclick="setMobileFilter(this,'hoy')">Hoy</div>
+    <div class="m-filter-chip" data-status="confirmado" onclick="setMobileFilter(this,'confirmado')">Confirmadas</div>
+    <div class="m-filter-chip" data-status="pendiente" onclick="setMobileFilter(this,'pendiente')">Pendientes</div>
   </div>
   <div class="m-cards" id="m-cards"></div>
 </div>
@@ -475,7 +511,7 @@
     renderTable();
     renderBlocked();
     initMobile();
-    if (isMobile()) renderMobileCards();
+    if (isMobile()) renderMobileHome();
   }
 
   /* ── Stats ── */
@@ -591,6 +627,7 @@
   /* ── Mobile UI ── */
   const isMobile = () => window.innerWidth <= 768;
   let mobileFilter = '';
+  let allBookings  = [];
 
   function initMobile() {
     if (!isMobile()) return;
@@ -619,55 +656,139 @@
     renderMobileCards();
   }
 
-  async function renderMobileCards() {
-    if (!isMobile()) return;
-    const q   = (document.getElementById('m-search-q')?.value || '').trim();
-    const params = new URLSearchParams();
-    if (mobileFilter) params.set('status', mobileFilter);
-    if (q) params.set('q', q);
-    const res  = await fetch(`/api/admin/bookings?${params}`, { headers: authHeader() });
-    const rows = await res.json();
-    const cont = document.getElementById('m-cards');
-    if (!rows.length) { cont.innerHTML = '<div style="text-align:center;color:var(--g-mid);padding:40px;font-size:.9rem">Sin reservas</div>'; return; }
-    cont.innerHTML = rows.map((b, i) => {
-      const d   = new Date(b.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short' });
-      const ok  = b.status === 'confirmado';
-      const badge = ok ? `<span class="badge-conf" style="font-size:.72rem">✓ Confirmado</span>` : `<span class="badge-pend" style="font-size:.72rem">⏳ Pendiente</span>`;
-      const confirmBtn = ok ? '' : `<button class="m-act-btn confirm" onclick="mConfirm('${b.id}')">Confirmar pago</button>`;
-      return `<div class="m-card" style="animation-delay:${i*0.05}s">
-        <div class="m-card-head">
-          <div class="m-card-name">${esc(b.name)}</div>
-          ${badge}
-        </div>
-        <div class="m-card-body">
-          <div class="m-card-row">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            ${d} · ${b.time} hrs
-          </div>
-          <div class="m-card-row">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            ${esc(b.service)}
-          </div>
-          <div class="m-card-row">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.1a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            <a href="tel:${esc(b.phone)}" style="color:var(--g-light)">${esc(b.phone)}</a>
-          </div>
-          <div class="m-card-row">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            <a href="mailto:${esc(b.email)}" style="color:var(--g-light)">${esc(b.email)}</a>
-          </div>
-        </div>
-        <div class="m-card-actions">
-          ${confirmBtn}
-          <button class="m-act-btn del" onclick="mDelete('${b.id}','${esc(b.name)}')">Eliminar</button>
-        </div>
-      </div>`;
-    }).join('');
+  async function loadAllBookings() {
+    const res = await fetch('/api/admin/bookings', { headers: authHeader() });
+    allBookings = await res.json();
+    allBookings.sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
   }
 
-  async function mConfirm(id) {
+  function mCardHTML(b, i = 0) {
+    const today   = new Date().toISOString().split('T')[0];
+    const d       = new Date(b.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+    const isToday = b.date === today;
+    const ok      = b.status === 'confirmado';
+    const badge   = ok
+      ? `<span class="badge-conf" style="font-size:.7rem;padding:3px 8px">✓ Pagado</span>`
+      : `<span class="badge-pend" style="font-size:.7rem;padding:3px 8px">⏳ Sin pago</span>`;
+    const dateLabel = isToday ? `<b style="color:var(--emerald-lt)">Hoy</b> · ${b.time} hrs` : `${d} · ${b.time} hrs`;
+    const phone = b.phone.replace(/\s/g,'');
+    const wspUrl = `https://wa.me/${phone.startsWith('+') ? phone.slice(1) : '56' + phone.replace(/^0/,'')}`;
+    const confirmBtn = ok ? '' : `<button class="m-act-btn confirm" onclick="mConfirm('${b.id}',this)">¿Ya pagó? Confirmar</button>`;
+    return `<div class="m-card${ok?'':' pending-card'}" style="animation-delay:${i*0.04}s">
+      <div class="m-card-head">
+        <div>
+          <div class="m-card-name">${esc(b.name)}</div>
+          <div class="m-card-service">${esc(b.service)}</div>
+        </div>
+        ${badge}
+      </div>
+      <div class="m-card-body">
+        <div class="m-card-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          ${dateLabel}
+        </div>
+        <div class="m-card-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.1a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>
+        </div>
+      </div>
+      <div class="m-card-actions">
+        ${confirmBtn}
+        <a href="${wspUrl}" target="_blank" class="m-act-btn wsp" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:4px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.524 5.847L.057 23.09a.75.75 0 0 0 .921.898l5.37-1.44A11.951 11.951 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.712 9.712 0 0 1-4.964-1.363l-.355-.214-3.684.987.996-3.598-.233-.37A9.712 9.712 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
+          WhatsApp
+        </a>
+        <button class="m-act-btn del" onclick="mDelete('${b.id}','${esc(b.name)}')">✕</button>
+      </div>
+    </div>`;
+  }
+
+  async function renderMobileHome() {
+    if (!isMobile()) return;
+    await loadAllBookings();
+    const today   = new Date().toISOString().split('T')[0];
+    const pending = allBookings.filter(b => b.status === 'pendiente');
+    const confirmed = allBookings.filter(b => b.status === 'confirmado');
+    const upcoming  = confirmed.filter(b => b.date >= today).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+    const next      = upcoming[0];
+
+    // Próxima sesión
+    const nextEl = document.getElementById('m-next-session');
+    if (next) {
+      const isToday = next.date === today;
+      const d = new Date(next.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+      const phone = next.phone.replace(/\s/g,'');
+      const wsp   = `https://wa.me/${phone.startsWith('+') ? phone.slice(1) : '56'+phone.replace(/^0/,'')}`;
+      nextEl.innerHTML = `
+        <div class="m-next-banner">
+          <div class="m-next-label">${isToday ? '🟢 Sesión hoy' : '📅 Próxima sesión'}</div>
+          <div class="m-next-name">${esc(next.name)}</div>
+          <div class="m-next-info">${esc(next.service)} · ${isToday ? 'Hoy' : d} a las ${next.time} hrs</div>
+          <div class="m-next-actions">
+            <a href="tel:${esc(next.phone)}" class="m-next-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.1a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Llamar
+            </a>
+            <a href="${wsp}" target="_blank" class="m-next-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.524 5.847L.057 23.09a.75.75 0 0 0 .921.898l5.37-1.44A11.951 11.951 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.712 9.712 0 0 1-4.964-1.363l-.355-.214-3.684.987.996-3.598-.233-.37A9.712 9.712 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
+              WhatsApp
+            </a>
+          </div>
+        </div>`;
+    } else {
+      nextEl.innerHTML = '';
+    }
+
+    // Pendientes de acción
+    const pendingEl = document.getElementById('m-pending-section');
+    if (pending.length) {
+      pendingEl.innerHTML = `
+        <div style="margin-bottom:20px">
+          <div class="m-pending-header">
+            <span class="m-pending-title">Requieren acción</span>
+            <span class="m-pending-badge">${pending.length} sin confirmar</span>
+          </div>
+          <div class="m-pending-note">Verifica el pago en Mercado Pago y luego confirma la reserva.</div>
+          <div class="m-cards">${pending.map((b,i) => mCardHTML(b, i)).join('')}</div>
+        </div>`;
+    } else {
+      pendingEl.innerHTML = '';
+    }
+
+    renderMobileCards();
+  }
+
+  function renderMobileCards() {
+    if (!isMobile()) return;
+    const q     = (document.getElementById('m-search-q')?.value || '').toLowerCase().trim();
+    const today = new Date().toISOString().split('T')[0];
+    let rows    = [...allBookings];
+
+    if (mobileFilter === 'hoy')        rows = rows.filter(b => b.date === today);
+    else if (mobileFilter === 'confirmado') rows = rows.filter(b => b.status === 'confirmado');
+    else if (mobileFilter === 'pendiente')  rows = rows.filter(b => b.status === 'pendiente');
+
+    if (q) rows = rows.filter(b => b.name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q) || b.phone.includes(q));
+
+    const cont = document.getElementById('m-cards');
+    const countEl = document.getElementById('m-count');
+    if (countEl) countEl.textContent = rows.length ? `${rows.length} reserva${rows.length>1?'s':''}` : '';
+
+    if (!rows.length) {
+      cont.innerHTML = `<div style="text-align:center;color:var(--g-mid);padding:40px 20px;font-size:.88rem">
+        <div style="font-size:2rem;margin-bottom:12px">📭</div>
+        Sin reservas para este filtro
+      </div>`;
+      return;
+    }
+    cont.innerHTML = rows.map((b, i) => mCardHTML(b, i)).join('');
+  }
+
+  async function mConfirm(id, btn) {
+    if (btn) { btn.textContent = 'Confirmando…'; btn.disabled = true; }
     await fetch(`/api/admin/bookings/${id}/confirm`, { method:'PATCH', headers: authHeader() });
-    renderMobileCards(); renderStats();
+    await renderMobileHome();
+    renderStats();
   }
 
   function mDelete(id, name) {
@@ -680,13 +801,13 @@
     const res  = await fetch('/api/admin/stats', { headers: authHeader() });
     const data = await res.json();
     document.getElementById('m-stats-detail').innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         <div class="stat-card accent"><div class="sc-label">Confirmadas</div><div class="sc-val">${data.confirmed}</div><div class="sc-sub">pago verificado</div></div>
-        <div class="stat-card"><div class="sc-label">Pendientes</div><div class="sc-val">${data.pending}</div><div class="sc-sub">esperando pago</div></div>
+        <div class="stat-card"><div class="sc-label">Sin confirmar</div><div class="sc-val">${data.pending}</div><div class="sc-sub">esperando pago</div></div>
         <div class="stat-card"><div class="sc-label">Clientes únicos</div><div class="sc-val">${data.unique}</div><div class="sc-sub">emails distintos</div></div>
         <div class="stat-card"><div class="sc-label">Hoy</div><div class="sc-val">${data.today}</div><div class="sc-sub">sesiones</div></div>
       </div>
-      ${data.revenue ? `<div class="stat-card accent" style="margin-bottom:0"><div class="sc-label">Ingresos totales confirmados</div><div class="sc-val" style="font-size:2rem">$${data.revenue.toLocaleString('es-CL')}</div><div class="sc-sub">CLP</div></div>` : ''}`;
+      ${data.revenue ? `<div class="stat-card accent"><div class="sc-label">Ingresos confirmados</div><div class="sc-val" style="font-size:1.7rem">$${data.revenue.toLocaleString('es-CL')}</div><div class="sc-sub">CLP · solo pagos verificados</div></div>` : ''}`;
   }
 
   async function renderMobileBlocked() {
@@ -764,7 +885,7 @@
   setInterval(() => {
     if (!sessionStorage.getItem(SESS)) return;
     renderStats();
-    if (isMobile()) renderMobileCards(); else renderTable();
+    if (isMobile()) renderMobileHome(); else renderTable();
   }, 30_000);
 
   /* ── Boot ── */
