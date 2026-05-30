@@ -339,10 +339,43 @@
       .svc-img { width: calc(100% + 40px); margin: -28px -20px 20px; height: 220px; }
     }
     @media (max-width: 900px) {
-      /* Servicios: 1 col centrado */
-      .services-grid { grid-template-columns: 1fr; max-width: 500px; margin-left: auto; margin-right: auto; }
-      .svc-card.feat { transform: none; animation: none; }
+      /* Servicios: carousel horizontal */
+      #services .wrap { overflow: visible; }
+      .services-grid {
+        display: flex !important;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 16px;
+        padding: 8px 24px 24px;
+        margin: 48px -24px 0;
+        max-width: none;
+        align-items: stretch;
+        cursor: grab;
+      }
+      .services-grid::-webkit-scrollbar { display: none; }
+      .services-grid:active { cursor: grabbing; }
+      .svc-card {
+        flex: 0 0 78vw;
+        max-width: 320px;
+        scroll-snap-align: center;
+        opacity: .6;
+        transform: scale(.95) translateY(0);
+        transition: opacity .45s var(--ease), transform .45s var(--ease), box-shadow .45s;
+      }
+      .svc-card.svc-active {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 24px 56px rgba(0,0,0,.18);
+      }
+      .svc-card.feat { animation: none; transform: scale(.95); }
+      .svc-card.feat.svc-active { transform: scale(1.02); box-shadow: 0 28px 64px rgba(26,107,74,.25); }
       .svc-img { height: 240px; }
+      /* Dots */
+      .svc-dots { display: flex; justify-content: center; align-items: center; gap: 7px; margin-top: 20px; }
+      .svc-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(26,107,74,.25); transition: all .35s var(--ease); flex-shrink: 0; }
+      .svc-dot.svc-dot-active { width: 22px; border-radius: 4px; background: var(--emerald); }
     }
     @media (max-width: 768px) {
       :root { --py: 64px; }
@@ -1146,6 +1179,61 @@
       document.getElementById('bk-pay-label').textContent = `Confirmar y pagar $${currentService.price.toLocaleString('es-CL')}`;
     }
   }
+
+  /* ── Mobile services carousel ───────────────────────────────────────── */
+  function initCarousel() {
+    if (window.innerWidth > 900) return;
+    const grid  = document.querySelector('.services-grid');
+    const cards = Array.from(grid.querySelectorAll('.svc-card'));
+    if (!cards.length) return;
+
+    // Dots
+    const dotsWrap = document.createElement('div');
+    dotsWrap.className = 'svc-dots';
+    cards.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'svc-dot';
+      dotsWrap.appendChild(d);
+    });
+    grid.parentNode.insertBefore(dotsWrap, grid.nextSibling);
+    const dots = Array.from(dotsWrap.children);
+
+    function getActive() {
+      const cx = grid.scrollLeft + grid.offsetWidth / 2;
+      let best = 0, bestDist = Infinity;
+      cards.forEach((c, i) => {
+        const dist = Math.abs(c.offsetLeft + c.offsetWidth / 2 - cx);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+      });
+      return best;
+    }
+
+    function update() {
+      const idx = getActive();
+      cards.forEach((c, i) => c.classList.toggle('svc-active', i === idx));
+      dots.forEach((d, i) => d.classList.toggle('svc-dot-active', i === idx));
+    }
+
+    // Initial scroll to center first card
+    const firstCard = cards[0];
+    grid.scrollLeft = firstCard.offsetLeft - (grid.offsetWidth - firstCard.offsetWidth) / 2;
+    update();
+
+    grid.addEventListener('scroll', update, { passive: true });
+
+    // Drag to scroll
+    let isDown = false, startX, scrollStart;
+    grid.addEventListener('mousedown', e => { isDown = true; startX = e.pageX - grid.offsetLeft; scrollStart = grid.scrollLeft; });
+    grid.addEventListener('mouseleave', () => isDown = false);
+    grid.addEventListener('mouseup', () => isDown = false);
+    grid.addEventListener('mousemove', e => {
+      if (!isDown) return;
+      e.preventDefault();
+      grid.scrollLeft = scrollStart - (e.pageX - grid.offsetLeft - startX);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initCarousel);
 
   /* ── 3D card tilt ────────────────────────────────────────────────────── */
   if (window.innerWidth > 900) {
