@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — BOSSKIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #0D0D0D; --card: #111a14; --emerald: #1A6B4A; --emerald-h: #145a3d;
+      --emerald-lt: #D4EDE3; --white: #FFFFFF; --g-dark: #3A3A3A; --g-mid: #7A7A7A;
+      --g-light: #C4C4C4; --red: #e05252; --font-t: 'Playfair Display',serif;
+      --font-b: 'DM Sans',sans-serif; --ease: cubic-bezier(.22,1,.36,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-b); background: var(--black); color: var(--white); min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ── Login ── */
+    #login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .login-box {
+      background: var(--card); border: 1px solid rgba(26,107,74,.25); border-radius: 16px;
+      padding: 48px 40px; width: 100%; max-width: 400px;
+      box-shadow: 0 40px 80px rgba(0,0,0,.6);
+    }
+    .login-logo { font-family: var(--font-t); font-size: 1.8rem; font-weight: 900; color: var(--white); margin-bottom: 4px; }
+    .login-sub  { font-size: .76rem; color: var(--g-mid); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 32px; }
+    .lbl  { display: block; font-size: .72rem; font-weight: 600; letter-spacing: .07em; color: rgba(255,255,255,.4); text-transform: uppercase; margin-bottom: 6px; }
+    .inp  { width: 100%; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 11px 14px; color: var(--white); font-family: var(--font-b); font-size: .92rem; outline: none; margin-bottom: 18px; transition: border-color .2s; }
+    .inp:focus { border-color: var(--emerald); }
+    .inp::placeholder { color: rgba(255,255,255,.2); }
+    .btn-login { width: 100%; background: var(--emerald); color: #fff; border: none; border-radius: 8px; padding: 13px; font-family: var(--font-b); font-size: .95rem; font-weight: 500; cursor: pointer; transition: background .2s, transform .2s; }
+    .btn-login:hover { background: var(--emerald-h); transform: translateY(-1px); }
+    .login-err { background: rgba(224,82,82,.12); border: 1px solid rgba(224,82,82,.3); color: #f87171; font-size: .82rem; padding: 9px 14px; border-radius: 8px; margin-bottom: 16px; display: none; }
+    .login-err.show { display: block; }
+
+    /* ── App shell ── */
+    #app { display: none; min-height: 100vh; flex-direction: column; }
+    #app.show { display: flex; }
+
+    /* ── Topbar ── */
+    .topbar {
+      background: rgba(13,13,13,.95); backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding: 0 28px; height: 64px; display: flex; align-items: center;
+      justify-content: space-between; position: sticky; top: 0; z-index: 10;
+    }
+    .tb-logo { display: flex; flex-direction: column; line-height: 1; gap: 2px; }
+    .tb-name { font-family: var(--font-t); font-size: 1.25rem; font-weight: 900; }
+    .tb-tag  { font-size: .58rem; font-weight: 300; letter-spacing: .1em; color: rgba(255,255,255,.4); text-transform: uppercase; }
+    .tb-right { display: flex; align-items: center; gap: 14px; }
+    .tb-date { font-size: .8rem; color: var(--g-mid); }
+    .btn-logout { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); color: var(--g-light); font-family: var(--font-b); font-size: .8rem; padding: 7px 14px; border-radius: 6px; cursor: pointer; transition: all .2s; }
+    .btn-logout:hover { background: rgba(255,255,255,.1); color: var(--white); }
+
+    /* ── Main ── */
+    main { padding: 32px 28px; flex: 1; max-width: 1300px; width: 100%; margin: 0 auto; }
+
+    /* ── Stats ── */
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--card); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 22px 24px; }
+    .stat-card.accent { border-color: rgba(26,107,74,.35); background: rgba(26,107,74,.08); }
+    .sc-label { font-size: .71rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.4); margin-bottom: 10px; }
+    .sc-val   { font-family: var(--font-t); font-size: 2.2rem; font-weight: 900; color: var(--white); line-height: 1; }
+    .stat-card.accent .sc-val { color: var(--emerald-lt); }
+    .sc-sub   { font-size: .75rem; color: var(--g-mid); margin-top: 5px; }
+
+    /* ── Toolbar ── */
+    .tbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tbar-title { font-family: var(--font-t); font-size: 1.2rem; font-weight: 700; color: var(--white); flex: 1; }
+    .filter-inp { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 8px 12px; color: var(--white); font-family: var(--font-b); font-size: .83rem; outline: none; transition: border-color .2s; color-scheme: dark; }
+    .filter-inp:focus { border-color: var(--emerald); }
+    .btn-sm { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: var(--g-light); font-family: var(--font-b); font-size: .8rem; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: all .2s; white-space: nowrap; }
+    .btn-sm:hover { background: rgba(255,255,255,.1); color: var(--white); }
+    .btn-sm.danger:hover { background: rgba(224,82,82,.12); border-color: rgba(224,82,82,.3); color: #f87171; }
+    .btn-sm.accent { background: var(--emerald); border-color: var(--emerald); color: #fff; }
+    .btn-sm.accent:hover { background: var(--emerald-h); }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--card); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: rgba(255,255,255,.03); border-bottom: 1px solid rgba(255,255,255,.07); }
+    th { padding: 13px 16px; text-align: left; font-size: .69rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.35); white-space: nowrap; }
+    td { padding: 14px 16px; font-size: .86rem; color: var(--g-light); border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    .td-name { color: var(--white); font-weight: 500; }
+    .td-date { color: var(--emerald-lt); font-weight: 600; white-space: nowrap; }
+    .td-time { background: rgba(26,107,74,.15); color: var(--emerald-lt); border-radius: 6px; padding: 3px 10px; font-size: .8rem; font-weight: 600; display: inline-block; }
+    .badge-svc { background: rgba(255,255,255,.07); color: var(--g-light); border-radius: 100px; padding: 3px 10px; font-size: .74rem; white-space: nowrap; }
+    .btn-del { background: transparent; border: 1px solid rgba(224,82,82,.25); color: #f87171; font-family: var(--font-b); font-size: .75rem; padding: 5px 11px; border-radius: 6px; cursor: pointer; transition: all .2s; }
+    .btn-del:hover { background: rgba(224,82,82,.1); border-color: rgba(224,82,82,.5); }
+    .btn-confirm { background: rgba(26,107,74,.15); border: 1px solid rgba(26,107,74,.35); color: var(--emerald-lt); font-family: var(--font-b); font-size: .75rem; padding: 5px 11px; border-radius: 6px; cursor: pointer; transition: all .2s; margin-right: 6px; }
+    .btn-confirm:hover { background: rgba(26,107,74,.28); border-color: var(--emerald); }
+    .badge-pend { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); border-radius: 100px; padding: 3px 10px; font-size: .72rem; font-weight: 600; white-space: nowrap; }
+    .badge-conf { background: rgba(26,107,74,.15); color: var(--emerald-lt); border: 1px solid rgba(26,107,74,.3); border-radius: 100px; padding: 3px 10px; font-size: .72rem; font-weight: 600; white-space: nowrap; }
+    .empty-row td { text-align: center; padding: 48px; color: var(--g-mid); font-size: .9rem; }
+
+    /* ── Modal confirm ── */
+    .confirm-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    .confirm-overlay.open { opacity: 1; pointer-events: auto; }
+    .confirm-box { background: #151f18; border: 1px solid rgba(224,82,82,.25); border-radius: 14px; padding: 32px 28px; max-width: 360px; width: 90%; text-align: center; box-shadow: 0 32px 64px rgba(0,0,0,.6); }
+    .confirm-t { font-family: var(--font-t); font-size: 1.2rem; font-weight: 700; color: var(--white); margin-bottom: 10px; }
+    .confirm-s { font-size: .85rem; color: var(--g-mid); line-height: 1.65; margin-bottom: 24px; }
+    .confirm-acts { display: flex; gap: 10px; justify-content: center; }
+    .btn-cancel { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); color: var(--g-light); font-family: var(--font-b); font-size: .85rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all .2s; }
+    .btn-cancel:hover { background: rgba(255,255,255,.12); }
+    .btn-confirm-del { background: var(--red); border: none; color: #fff; font-family: var(--font-b); font-size: .85rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: background .2s; }
+    .btn-confirm-del:hover { background: #c94444; }
+
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (max-width: 600px) {
+      main { padding: 20px 16px; }
+      .topbar { padding: 0 16px; }
+      .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .tbar { gap: 8px; }
+      th, td { padding: 10px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Login ─────────────────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">BOSSKIN</div>
+    <div class="login-sub">Panel de Administración</div>
+    <div class="login-err" id="login-err">Contraseña incorrecta</div>
+    <label class="lbl" for="pw-input">Contraseña</label>
+    <input class="inp" type="password" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-login" onclick="doLogin()">Ingresar →</button>
+  </div>
+</div>
+
+<!-- ── App ───────────────────────────────────────────────────────────────── -->
+<div id="app">
+  <header class="topbar">
+    <div class="tb-logo">
+      <span class="tb-name">BOSSKIN</span>
+      <span class="tb-tag">Admin · BarbiVillalobos</span>
+    </div>
+    <div class="tb-right">
+      <span class="tb-date" id="tb-date"></span>
+      <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="stats" id="stats-row"></div>
+
+    <div class="tbar">
+      <span class="tbar-title">Reservas</span>
+      <input class="filter-inp" type="date" id="filter-date" onchange="renderTable()" title="Filtrar por fecha">
+      <input class="filter-inp" type="search" id="filter-q" placeholder="Buscar nombre o email…" oninput="renderTable()" style="min-width:180px">
+      <button class="btn-sm" onclick="clearFilters()">Limpiar filtros</button>
+      <button class="btn-sm accent" onclick="exportCSV()">Exportar CSV</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Servicio</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Estado</th>
+            <th>Agendado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- ── Confirm delete ──────────────────────────────────────────────────── -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-t">Eliminar reserva</div>
+    <div class="confirm-s" id="confirm-msg"></div>
+    <div class="confirm-acts">
+      <button class="btn-cancel" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn-confirm-del" onclick="confirmDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SESS = 'boosskin_admin_pw';
+  let pendingDeleteId = null;
+
+  function authHeader() { return { 'Authorization': `Bearer ${sessionStorage.getItem(SESS)}` }; }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  /* ── Auth ── */
+  async function doLogin() {
+    const pw  = document.getElementById('pw-input').value;
+    const res = await fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${pw}` } });
+    if (res.ok) {
+      sessionStorage.setItem(SESS, pw);
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').classList.add('show');
+      init();
+    } else {
+      document.getElementById('login-err').classList.add('show');
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+    }
+  }
+  function doLogout() { sessionStorage.removeItem(SESS); location.reload(); }
+
+  /* ── Init ── */
+  function init() {
+    document.getElementById('tb-date').textContent = new Date().toLocaleDateString('es-CL', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    renderStats();
+    renderTable();
+  }
+
+  /* ── Stats ── */
+  async function renderStats() {
+    const res  = await fetch('/api/admin/stats', { headers: authHeader() });
+    const data = await res.json();
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat-card accent">
+        <div class="sc-label">Confirmadas</div>
+        <div class="sc-val">${data.confirmed}</div>
+        <div class="sc-sub">pago verificado</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Pendientes pago</div>
+        <div class="sc-val">${data.pending}</div>
+        <div class="sc-sub">esperando confirmación</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Clientes únicos</div>
+        <div class="sc-val">${data.unique}</div>
+        <div class="sc-sub">emails distintos</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Hoy</div>
+        <div class="sc-val">${data.today}</div>
+        <div class="sc-sub">sesiones agendadas</div>
+      </div>`;
+  }
+
+  /* ── Table ── */
+  async function renderTable() {
+    const q    = document.getElementById('filter-q').value.trim();
+    const date = document.getElementById('filter-date').value;
+    const params = new URLSearchParams();
+    if (date) params.set('date', date);
+    if (q)    params.set('q', q);
+
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Cargando…</td></tr>';
+
+    const res  = await fetch(`/api/admin/bookings?${params}`, { headers: authHeader() });
+    const rows = await res.json();
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No hay reservas que coincidan con los filtros.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(b => {
+      const d   = new Date(b.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+      const ag  = new Date(b.created_at).toLocaleDateString('es-CL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      const ok  = b.status === 'confirmado';
+      const badge      = ok ? `<span class="badge-conf">✓ Confirmado</span>` : `<span class="badge-pend">⏳ Pendiente</span>`;
+      const confirmBtn = ok ? '' : `<button class="btn-confirm" onclick="confirmPayment('${b.id}')">Confirmar pago</button>`;
+      return `<tr>
+        <td class="td-name">${esc(b.name)}</td>
+        <td><a href="mailto:${esc(b.email)}" style="color:var(--g-light);text-decoration:underline;text-underline-offset:3px">${esc(b.email)}</a></td>
+        <td><a href="tel:${esc(b.phone)}" style="color:var(--g-light)">${esc(b.phone)}</a></td>
+        <td><span class="badge-svc">${esc(b.service)}</span></td>
+        <td class="td-date">${d}</td>
+        <td><span class="td-time">${b.time}</span></td>
+        <td>${badge}</td>
+        <td style="color:var(--g-mid);font-size:.79rem">${ag}</td>
+        <td style="white-space:nowrap">${confirmBtn}<button class="btn-del" onclick="askDelete('${b.id}','${esc(b.name)}','${b.date}','${b.time}')">Eliminar</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  /* ── Confirmar pago manual ── */
+  async function confirmPayment(id) {
+    await fetch(`/api/admin/bookings/${id}/confirm`, { method: 'PATCH', headers: authHeader() });
+    renderStats();
+    renderTable();
+  }
+
+  /* ── Eliminar ── */
+  function askDelete(id, name, date, time) {
+    pendingDeleteId = id;
+    const d = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+    document.getElementById('confirm-msg').innerHTML = `¿Eliminar la reserva de <strong>${esc(name)}</strong><br>${d} a las ${time}?<br><br>Esta acción no se puede deshacer.`;
+    document.getElementById('confirm-overlay').classList.add('open');
+  }
+  function closeConfirm() { document.getElementById('confirm-overlay').classList.remove('open'); pendingDeleteId = null; }
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    await fetch(`/api/admin/bookings/${pendingDeleteId}`, { method: 'DELETE', headers: authHeader() });
+    closeConfirm();
+    renderStats();
+    renderTable();
+  }
+
+  /* ── Filtros ── */
+  function clearFilters() {
+    document.getElementById('filter-date').value = '';
+    document.getElementById('filter-q').value = '';
+    renderTable();
+  }
+
+  /* ── Exportar CSV ── */
+  async function exportCSV() {
+    const res  = await fetch('/api/admin/bookings', { headers: authHeader() });
+    const rows = await res.json();
+    rows.sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+    const header = ['Nombre','Email','Teléfono','Servicio','Fecha','Hora','Estado','Agendado'];
+    const csv = [header, ...rows.map(b => [b.name, b.email, b.phone, b.service, b.date, b.time, b.status, b.created_at])]
+      .map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `boosskin_reservas_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  }
+
+  /* ── Boot ── */
+  if (sessionStorage.getItem(SESS)) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').classList.add('show');
+    init();
+  }
+</script>
+</body>
+</html>

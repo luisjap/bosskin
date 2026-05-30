@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmación — BOSSKIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #0D0D0D; --emerald: #1A6B4A; --emerald-lt: #D4EDE3;
+      --white: #FFFFFF; --g-mid: #7A7A7A; --red: #e05252;
+      --font-t: 'Playfair Display',serif; --font-b: 'DM Sans',sans-serif;
+      --ease: cubic-bezier(.22,1,.36,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-b); background: var(--black); color: var(--white); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { background: #0e1a12; border: 1px solid rgba(26,107,74,.25); border-radius: 16px; padding: 48px 40px; max-width: 500px; width: 100%; text-align: center; box-shadow: 0 40px 80px rgba(0,0,0,.6); }
+    .ico { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
+    .ico-ok  { background: rgba(26,107,74,.15); }
+    .ico-err { background: rgba(224,82,82,.12); }
+    .ico-pnd { background: rgba(245,158,11,.1); }
+    h1 { font-family: var(--font-t); font-size: 1.8rem; font-weight: 900; margin-bottom: 12px; }
+    .sub { font-size: .92rem; color: var(--g-mid); line-height: 1.75; margin-bottom: 28px; }
+    .detail { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 18px 20px; text-align: left; margin-bottom: 28px; display: none; }
+    .detail.show { display: block; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; font-size: .86rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .detail-row:last-child { border: none; }
+    .dr-label { color: var(--g-mid); }
+    .dr-val   { color: var(--white); font-weight: 500; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border-radius: 8px; font-family: var(--font-b); font-weight: 500; font-size: .92rem; border: none; cursor: pointer; text-decoration: none; transition: transform .2s, background .2s; }
+    .btn-em   { background: var(--emerald); color: var(--white); }
+    .btn-em:hover { background: #145a3d; transform: translateY(-1px); }
+    .btn-ghost { background: rgba(255,255,255,.07); color: var(--g-mid); }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); color: var(--white); }
+    .acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .loader { width: 40px; height: 40px; border: 3px solid rgba(26,107,74,.2); border-top-color: var(--emerald); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="loader" id="loader"></div>
+  <p style="color:var(--g-mid);font-size:.9rem">Verificando pago…</p>
+</div>
+
+<script>
+  const params  = new URLSearchParams(location.search);
+  const status  = params.get('status');
+  const id      = params.get('id');
+
+  async function render() {
+    const card = document.getElementById('card');
+    let booking = null;
+
+    if (id) {
+      try {
+        const r = await fetch(`/api/bookings/${id}`);
+        if (r.ok) booking = await r.json();
+      } catch (_) {}
+    }
+
+    const dateStr = booking
+      ? new Date(booking.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+      : null;
+
+    let html = '';
+
+    if (status === 'success' || (booking && booking.status === 'confirmado')) {
+      html = `
+        <div class="ico ico-ok">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A6B4A" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h1>¡Pago confirmado!</h1>
+        <p class="sub">Tu asesoría quedó reservada. Te enviaremos el link de videollamada a tu correo antes de la sesión.</p>
+        ${booking ? `
+        <div class="detail show">
+          <div class="detail-row"><span class="dr-label">Nombre</span><span class="dr-val">${esc(booking.name)}</span></div>
+          <div class="detail-row"><span class="dr-label">Fecha</span><span class="dr-val">${dateStr}</span></div>
+          <div class="detail-row"><span class="dr-label">Hora</span><span class="dr-val">${booking.time} hrs</span></div>
+          <div class="detail-row"><span class="dr-label">Servicio</span><span class="dr-val">${esc(booking.service)}</span></div>
+        </div>` : ''}
+        <div class="acts">
+          <a href="/" class="btn btn-em">Volver al inicio</a>
+        </div>`;
+
+    } else if (status === 'pending') {
+      html = `
+        <div class="ico ico-pnd">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h1>Pago en proceso</h1>
+        <p class="sub">Tu pago está siendo procesado. Cuando se confirme recibirás un correo con los detalles de tu sesión.</p>
+        ${booking ? `
+        <div class="detail show">
+          <div class="detail-row"><span class="dr-label">Fecha reservada</span><span class="dr-val">${dateStr}</span></div>
+          <div class="detail-row"><span class="dr-label">Hora</span><span class="dr-val">${booking.time} hrs</span></div>
+        </div>` : ''}
+        <div class="acts">
+          <a href="/" class="btn btn-em">Volver al inicio</a>
+        </div>`;
+
+    } else {
+      html = `
+        <div class="ico ico-err">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </div>
+        <h1>Pago no completado</h1>
+        <p class="sub">El pago no fue procesado. Tu hora sigue disponible — puedes intentarlo de nuevo.</p>
+        <div class="acts">
+          <a href="/" class="btn btn-em">Intentar de nuevo</a>
+        </div>`;
+    }
+
+    card.innerHTML = html;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  render();
+</script>
+</body>
+</html>
