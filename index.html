@@ -502,6 +502,13 @@
     .bk-cancel-note svg { flex-shrink:0;margin-top:1px;color:var(--emerald); }
     .bk-btn-back { background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--g-light);padding:14px 20px;font-size:.9rem;border-radius:8px;cursor:pointer;transition:background .2s;white-space:nowrap; }
     .bk-btn-back:hover { background:rgba(255,255,255,.12);color:var(--white); }
+    /* Toast */
+    .bk-toast { position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;padding:12px 20px;border-radius:10px;font-size:.85rem;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:2000;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center; }
+    .bk-toast.error { border-left:3px solid #f87171; }
+    .bk-toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+    /* Inline error en modal */
+    .bk-error { background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);color:#f87171;border-radius:8px;padding:10px 14px;font-size:.82rem;margin-top:12px;display:none; }
+    .bk-error.show { display:block; }
     .bk-success { text-align:center;padding:16px 0; }
     .bk-success-ico { width:64px;height:64px;background:rgba(26,107,74,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px; }
     .bk-success-t { font-family:var(--font-t);font-size:1.5rem;font-weight:700;color:var(--white);margin-bottom:10px; }
@@ -902,6 +909,8 @@
   </div>
 </footer>
 
+<div class="bk-toast error" id="bk-toast"></div>
+
 <!-- ══ BOOKING MODAL ══════════════════════════════════════════════════════ -->
 <div id="bk-overlay" class="bk-overlay" onclick="closeBkOutside(event)">
   <div class="bk-modal">
@@ -936,6 +945,7 @@
           </div>
           <input type="hidden" id="bk-time">
         </div>
+        <div class="bk-error" id="bk-form-error"></div>
         <button type="submit" class="btn btn-em bk-submit" id="bk-submit-btn">
           Reservar →
         </button>
@@ -1055,6 +1065,19 @@
   }, { threshold: .6 });
   document.querySelectorAll('[data-count]').forEach(el => cntObs.observe(el));
 
+  /* ── Toast y errores inline ──────────────────────────────────────────── */
+  function showToast(msg) {
+    const t = document.getElementById('bk-toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+  function showFormError(msg) {
+    const el = document.getElementById('bk-form-error');
+    if (!el) return;
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 4000);
+  }
+
   /* ── Booking system (API) ────────────────────────────────────────────── */
   const BK_SERVICES = {
     express:  { key: 'express',  name: 'Consulta Express',        price: 6500  },
@@ -1125,7 +1148,7 @@
   function submitBooking(e) {
     e.preventDefault();
     const time = document.getElementById('bk-time').value;
-    if (!time) { alert('Por favor selecciona un horario disponible.'); return; }
+    if (!time) { showFormError('Por favor selecciona un horario disponible.'); return; }
 
     pendingBooking = {
       name:    document.getElementById('bk-name').value.trim(),
@@ -1167,7 +1190,7 @@
       const data = await r.json();
 
       if (r.status === 409) {
-        alert('Ese horario acaba de ser reservado. Por favor elige otro.');
+        showToast('Ese horario acaba de ser reservado. Por favor elige otro.');
         btn.disabled = false;
         document.getElementById('bk-pay-label').textContent = `Confirmar y pagar $${currentService.price.toLocaleString('es-CL')}`;
         backToForm();
@@ -1185,7 +1208,7 @@
       pendingBooking = null;
 
     } catch (err) {
-      alert('Ocurrió un error: ' + err.message);
+      showToast('Ocurrió un error, intenta nuevamente.');
       btn.disabled = false;
       document.getElementById('bk-pay-label').textContent = `Confirmar y pagar $${currentService.price.toLocaleString('es-CL')}`;
     }

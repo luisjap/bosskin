@@ -110,6 +110,16 @@
     .btn-confirm-del { background: var(--red); border: none; color: #fff; font-family: var(--font-b); font-size: .85rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: background .2s; }
     .btn-confirm-del:hover { background: #c94444; }
 
+    /* Block dates */
+    .block-section { margin-top: 32px; }
+    .block-title { font-family: var(--font-t); font-size: 1.1rem; font-weight: 700; color: var(--white); margin-bottom: 14px; }
+    .block-form { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+    .blocked-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .blocked-chip { background: rgba(224,82,82,.1); border: 1px solid rgba(224,82,82,.25); color: #f87171; border-radius: 100px; padding: 5px 12px; font-size: .8rem; display: flex; align-items: center; gap: 8px; }
+    .blocked-chip button { background: none; border: none; color: #f87171; cursor: pointer; font-size: .85rem; padding: 0; line-height: 1; }
+    .blocked-empty { font-size: .83rem; color: var(--g-mid); }
+    /* Auto-refresh indicator */
+    .refresh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); display: inline-block; margin-right: 6px; animation: waPulse 2s infinite; }
     @media (max-width: 900px) {
       .stats { grid-template-columns: repeat(2,1fr); }
     }
@@ -145,6 +155,7 @@
     </div>
     <div class="tb-right">
       <span class="tb-date" id="tb-date"></span>
+      <span style="font-size:.75rem;color:var(--g-mid)"><span class="refresh-dot"></span>Auto-refresh</span>
       <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
     </div>
   </header>
@@ -160,7 +171,17 @@
       <button class="btn-sm accent" onclick="exportCSV()">Exportar CSV</button>
     </div>
 
-    <div class="table-wrap">
+    <!-- Bloqueo de fechas -->
+    <div class="block-section">
+      <div class="block-title">Fechas bloqueadas</div>
+      <div class="block-form">
+        <input class="filter-inp" type="date" id="block-date-input">
+        <button class="btn-sm accent" onclick="blockDate()">Bloquear fecha</button>
+      </div>
+      <div class="blocked-list" id="blocked-list"><span class="blocked-empty">Sin fechas bloqueadas</span></div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:32px">
       <table>
         <thead>
           <tr>
@@ -222,6 +243,7 @@
     document.getElementById('tb-date').textContent = new Date().toLocaleDateString('es-CL', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     renderStats();
     renderTable();
+    renderBlocked();
   }
 
   /* ── Stats ── */
@@ -333,6 +355,34 @@
     a.download = `boosskin_reservas_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
   }
+
+  /* ── Bloqueo de fechas ── */
+  async function renderBlocked() {
+    const res  = await fetch('/api/admin/blocked', { headers: authHeader() });
+    const dates = await res.json();
+    const list  = document.getElementById('blocked-list');
+    if (!dates.length) { list.innerHTML = '<span class="blocked-empty">Sin fechas bloqueadas</span>'; return; }
+    list.innerHTML = dates.sort().map(d => {
+      const label = new Date(d + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short' });
+      return `<div class="blocked-chip">${label} <button onclick="unblockDate('${d}')" title="Desbloquear">✕</button></div>`;
+    }).join('');
+  }
+  async function blockDate() {
+    const d = document.getElementById('block-date-input').value;
+    if (!d) return;
+    await fetch('/api/admin/blocked', { method:'POST', headers: { ...authHeader(), 'Content-Type':'application/json' }, body: JSON.stringify({ date: d }) });
+    document.getElementById('block-date-input').value = '';
+    renderBlocked();
+  }
+  async function unblockDate(d) {
+    await fetch(`/api/admin/blocked/${d}`, { method:'DELETE', headers: authHeader() });
+    renderBlocked();
+  }
+
+  /* ── Auto-refresh cada 30s ── */
+  setInterval(() => {
+    if (sessionStorage.getItem(SESS)) { renderStats(); renderTable(); }
+  }, 30_000);
 
   /* ── Boot ── */
   if (sessionStorage.getItem(SESS)) {
