@@ -501,6 +501,21 @@
       .m-cal-month { font-family: var(--font-t); font-size: .95rem; font-weight: 700; color: var(--white); text-transform: capitalize; }
       .m-agenda-cal .cal-day { min-height: 38px; font-size: .86rem; }
       .m-agenda-cal .cal-dow { font-size: .68rem; padding-bottom: 10px; }
+      /* ── Vista Cliente (preview) ── */
+      .pv-day-avail { border-color: rgba(26,107,74,.45) !important; color: var(--emerald-lt) !important; }
+      .pv-day-avail:hover { background: rgba(26,107,74,.2) !important; border-color: var(--emerald) !important; }
+      .pv-slot {
+        background: rgba(26,107,74,.12); border: 1px solid rgba(26,107,74,.3);
+        color: var(--emerald-lt); border-radius: 9px; padding: 9px 14px;
+        font-family: var(--font-b); font-size: .82rem; font-weight: 500;
+      }
+      .pv-slot.taken {
+        background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08);
+        color: rgba(255,255,255,.2); text-decoration: line-through;
+      }
+      .pv-legend { display: flex; gap: 14px; font-size: .7rem; color: var(--g-mid); margin-top: 10px; flex-wrap: wrap; }
+      .pv-legend span { display: flex; align-items: center; gap: 4px; }
+
       /* Fines de semana visibles y clicables en admin */
       .m-agenda-cal .cal-nonwork:not(.cal-past) { opacity: .6; cursor: pointer; }
       .m-agenda-cal .cal-nonwork:not(.cal-past):hover { background: rgba(26,107,74,.18); border-color: rgba(26,107,74,.35); opacity: 1; }
@@ -942,6 +957,35 @@
   </div>
 </div>
 
+<!-- Tab: Vista Cliente (preview) -->
+<div class="m-tab" id="m-tab-preview" style="display:none">
+  <div class="m-section-title">Vista Cliente</div>
+  <div class="m-section-sub">Lo que ve una clienta al intentar agendar. Toca un día para ver los horarios disponibles.</div>
+
+  <div class="m-agenda-cal" style="margin-bottom:14px">
+    <div class="m-cal-nav">
+      <button class="m-cal-nav-btn" onclick="pvCalPrev()">‹</button>
+      <span class="m-cal-month" id="pv-cal-lbl"></span>
+      <button class="m-cal-nav-btn" onclick="pvCalNext()">›</button>
+    </div>
+    <div class="cal-grid" id="pv-cal-grid"></div>
+    <div class="pv-legend">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(26,107,74,.2);border:1px solid rgba(26,107,74,.5)"></span>Disponible</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)"></span>Cerrado</span>
+    </div>
+  </div>
+
+  <div id="pv-day-panel" style="display:none">
+    <div class="m-config-card">
+      <div style="padding:13px 14px">
+        <div style="font-family:var(--font-t);font-size:.95rem;font-weight:700;color:var(--white);margin-bottom:4px;text-transform:capitalize" id="pv-day-title"></div>
+        <div id="pv-day-status" style="font-size:.72rem;color:var(--g-mid);margin-bottom:12px"></div>
+        <div id="pv-slots-wrap" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Bottom Navigation -->
 <nav class="m-bottom-nav" id="m-bottom-nav" style="display:none">
   <button class="m-nav-btn active" id="m-btn-reservas" onclick="switchTab('reservas')">
@@ -991,6 +1035,10 @@
       </button>
       <button class="m-drawer-item" id="mdi-contenido" onclick="switchToDesktopPanel('contenido','Contenido e Imágenes')">
         <span class="m-di-ico">✏️</span> Contenido e Imágenes
+      </button>
+      <div class="m-drawer-sep"></div>
+      <button class="m-drawer-item" id="mdi-preview" onclick="switchMTab('preview')">
+        <span class="m-di-ico">👁</span> Vista cliente
       </button>
       <div class="m-drawer-sep"></div>
       <button class="m-drawer-item" id="mdi-stats" onclick="switchMTab('stats')">
@@ -1245,8 +1293,8 @@
     document.body.style.overflow = '';
   }
 
-  const M_TABS = ['home','reservas','stats','agenda','config'];
-  const M_DRAWER_IDS = ['mdi-home','mdi-reservas','mdi-stats','mdi-agenda','mdi-config','mdi-servicios','mdi-contenido'];
+  const M_TABS = ['home','reservas','stats','agenda','config','preview'];
+  const M_DRAWER_IDS = ['mdi-home','mdi-reservas','mdi-stats','mdi-agenda','mdi-config','mdi-servicios','mdi-contenido','mdi-preview'];
 
   function switchMTab(tab) {
     closeDrawer();
@@ -1260,9 +1308,10 @@
     document.getElementById(`mdi-${tab}`)?.classList.add('active');
     if (tab === 'home')    renderMobileHome();
     else if (tab === 'reservas') { if (allBookings.length) renderMobileCards(); else loadAllBookings().then(renderMobileCards); }
-    else if (tab === 'stats')  renderMobileStats();
-    else if (tab === 'config') renderMobileBlocked();
-    else if (tab === 'agenda') renderMobileAgenda();
+    else if (tab === 'stats')   renderMobileStats();
+    else if (tab === 'config')  renderMobileBlocked();
+    else if (tab === 'agenda')  renderMobileAgenda();
+    else if (tab === 'preview') renderMobilePreview();
     window.scrollTo(0, 0);
   }
 
@@ -2392,6 +2441,99 @@
     const data = await res.json();
     showMToast(data.removed ? `✓ ${data.removed} días liberados` : 'Sin bloqueados en este mes');
     mCalLoad(); renderBlocked();
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     VISTA CLIENTE (PREVIEW)
+  ══════════════════════════════════════════════════════════════════════════ */
+  let _pvYear, _pvMonth, _pvBlocked = [];
+
+  async function renderMobilePreview() {
+    if (!_cfg) await loadConfigEditor();
+    if (!_pvYear) { const n = new Date(); _pvYear = n.getFullYear(); _pvMonth = n.getMonth() + 1; }
+    try { const r = await apiFetch('/api/admin/blocked', {}); _pvBlocked = await r.json(); } catch { _pvBlocked = []; }
+    pvCalRender();
+    document.getElementById('pv-day-panel').style.display = 'none';
+  }
+
+  function pvCalPrev() { _pvMonth--; if (_pvMonth < 1) { _pvMonth = 12; _pvYear--; } pvCalRender(); }
+  function pvCalNext() { _pvMonth++; if (_pvMonth > 12) { _pvMonth = 1; _pvYear++; } pvCalRender(); }
+
+  function pvCalRender() {
+    const lbl  = document.getElementById('pv-cal-lbl');
+    const grid = document.getElementById('pv-cal-grid');
+    if (!lbl || !grid || !_cfg) return;
+
+    const workdays   = _cfg.schedule?.workdays || [1,2,3,4,5];
+    const openUntil  = _cfg.schedule?.openUntil;
+    const maxDays    = _cfg.schedule?.maxAdvanceDays || 60;
+    lbl.textContent  = new Date(_pvYear, _pvMonth - 1, 1).toLocaleDateString('es-CL', { month:'long', year:'numeric' });
+
+    const today      = new Date().toISOString().split('T')[0];
+    const maxDate    = new Date(); maxDate.setDate(maxDate.getDate() + maxDays);
+    const maxDateStr = maxDate.toISOString().split('T')[0];
+    const firstDow   = (new Date(_pvYear, _pvMonth - 1, 1).getDay() + 6) % 7;
+    const daysInMonth= new Date(_pvYear, _pvMonth, 0).getDate();
+
+    let html = DOW_LABELS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+    for (let i = 0; i < firstDow; i++) html += `<div class="cal-day cal-empty"></div>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date   = `${_pvYear}-${String(_pvMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const jsDay  = new Date(_pvYear, _pvMonth - 1, d).getDay();
+      const isPast = date < today;
+      const isWork = workdays.includes(jsDay);
+      const isBlocked  = _pvBlocked.includes(date);
+      const isOutRange = date > maxDateStr || (openUntil && date > openUntil);
+      const available  = !isPast && isWork && !isBlocked && !isOutRange;
+
+      let cls = 'cal-day';
+      if (isPast) cls += ' cal-past';
+      else if (!available) cls += ' cal-nonwork';
+      if (date === today && available) cls += ' cal-today';
+      if (available && date !== today) cls += ' pv-day-avail';
+
+      const onclick = available || isBlocked ? `onclick="pvSelectDay('${date}',${isBlocked})"` : '';
+      html += `<div class="${cls}" ${onclick}>${d}</div>`;
+    }
+    grid.innerHTML = html;
+  }
+
+  async function pvSelectDay(date, isBlocked) {
+    const panel = document.getElementById('pv-day-panel');
+    const title = document.getElementById('pv-day-title');
+    const status = document.getElementById('pv-day-status');
+    const wrap  = document.getElementById('pv-slots-wrap');
+    panel.style.display = 'block';
+
+    const label = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+    title.textContent = label;
+
+    if (isBlocked) {
+      status.innerHTML = '<span style="color:#f87171">⛔ Día bloqueado — los clientes no pueden agendar</span>';
+      wrap.innerHTML = '';
+      panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      return;
+    }
+
+    status.textContent = 'Cargando horarios…';
+    wrap.innerHTML = '';
+
+    try {
+      const res   = await fetch(`/api/slots?date=${date}`);
+      const slots = await res.json();
+      const avail = slots.filter(s => s.available).length;
+      status.innerHTML = avail
+        ? `<span style="color:var(--emerald-lt)">✓ ${avail} horario${avail!==1?'s':''} disponible${avail!==1?'s':''}</span>`
+        : `<span style="color:#f87171">Sin horarios disponibles</span>`;
+
+      wrap.innerHTML = slots.map(s =>
+        `<div class="pv-slot${s.available?'':' taken'}">${s.time}</div>`
+      ).join('') || '<span style="color:var(--g-mid);font-size:.82rem">Sin horarios configurados</span>';
+    } catch {
+      status.textContent = 'Error al cargar';
+    }
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
 
   async function exportAndDownload() {
