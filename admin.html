@@ -1390,9 +1390,6 @@
     const confirmed = allBookings.filter(b => b.status === 'confirmado');
     const upcoming  = confirmed.filter(b => b.date >= today).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
     const next      = upcoming[0];
-    const confirmed = allBookings.filter(b => b.status === 'confirmado');
-    const upcoming  = confirmed.filter(b => b.date >= today).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
-    const next      = upcoming[0];
 
     // Próxima sesión → #m-home-next
     const nextEl = document.getElementById('m-home-next');
