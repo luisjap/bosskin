@@ -252,7 +252,8 @@
       /* ── Ocultar elementos desktop ── */
       .table-wrap, .tbar, .block-section, .d-tabs, #stats-row { display: none !important; }
       .m-bottom-nav { display: none !important; }
-      #app.show { padding-bottom: 0; }
+      /* App: no forzar altura completa en mobile (los m-tabs están fuera del #app) */
+      #app.show { min-height: 0 !important; padding-bottom: 0; }
       /* Ocultar main (paneles desktop) en mobile — solo visible en m-panel-mode */
       #app main { display: none; }
       #app main.m-panel-mode { display: block !important; }
