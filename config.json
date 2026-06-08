@@ -1,0 +1,37 @@
+{
+  "services": [
+    {
+      "key": "express",
+      "name": "Consulta Express",
+      "price": 6500,
+      "duration": 25,
+      "active": true,
+      "description": "Sesión de 25 minutos para resolver tus dudas puntuales sobre un producto, una reacción o cómo armar tu primera rutina.",
+      "features": ["25 min de sesión online", "Respuesta en 24 horas", "Pago previo confirmado"]
+    },
+    {
+      "key": "asesoria",
+      "name": "Asesoría Personalizada",
+      "price": 20000,
+      "duration": 60,
+      "active": true,
+      "description": "Sesión de 60 minutos donde analizamos tu piel en profundidad. Recibirás una rutina completa adaptada a ti y a tu presupuesto.",
+      "features": ["60 min de sesión completa", "1 vez a la semana por 4 semanas", "Rutina completa por escrito", "Lista de productos reales", "Seguimiento incluido"]
+    },
+    {
+      "key": "revision",
+      "name": "Revisión de Productos",
+      "price": 10000,
+      "duration": 20,
+      "active": true,
+      "description": "Revisamos juntas los productos que ya tienes o planeas comprar. Te digo qué funciona, en qué orden usarlos y qué evitar.",
+      "features": ["20 minutos de sesión", "Hasta 10 productos revisados", "Análisis de ingredientes", "Lista de substitutos"]
+    }
+  ],
+  "schedule": {
+    "slots": ["11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00"],
+    "workdays": [1,2,3,4,5],
+    "minAdvanceHours": 2,
+    "maxAdvanceDays": 60
+  }
+}

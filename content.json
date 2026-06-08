@@ -1,0 +1,40 @@
+{
+  "contact": {
+    "whatsapp": "",
+    "email": "",
+    "instagram": "https://www.instagram.com/barbivillaloboss",
+    "tiktok": "https://www.tiktok.com/@barbivillaloboss"
+  },
+  "hero": {
+    "badge": "Cosmetóloga Certificada · Santiago, Chile",
+    "title": "Tu piel merece\natención experta",
+    "subtitle": "Asesorías personalizadas en skincare para que entiendas tu piel, elijas los productos correctos y logres los resultados que buscas.",
+    "trustText": "+500 clientas ya transformaron su piel",
+    "stat1Value": "500+",
+    "stat1Label": "Pieles transformadas",
+    "stat2Value": "5 ★",
+    "stat2Label": "Valoración promedio"
+  },
+  "cta": {
+    "tag": "Sin rodeos. Sin ventas falsas.",
+    "title": "¿Lista para empezar\ncon tu piel?",
+    "subtitle": "Agenda tu consulta y recibe una asesoría personalizada basada en evidencia científica."
+  },
+  "footer": {
+    "description": "Cosmetología con base científica. Asesorías para entender y transformar tu piel desde la raíz.",
+    "copyright": "© 2025 BOSSKIN — BarbiVillalobos. Todos los derechos reservados."
+  },
+  "testimonialMain": {
+    "quote": "Llevaba años sin entender mi piel. Con Barbara aprendí a leer los ingredientes, armar una rutina real y dejar de gastar en productos que no servían. Mi piel cambió en cuatro semanas.",
+    "author": "Valentina M.",
+    "city": "Santiago, Chile"
+  },
+  "reviews": [
+    { "quote": "Con Barbara entendí finalmente qué productos usar para mi piel mixta. La rutina que me armó es simple y los resultados se vieron en menos de un mes.", "author": "Camila R.", "location": "Viña del Mar" },
+    { "quote": "Revisamos todos mis productos y la mitad los estaba usando mal. Me ahorró plata y mejoró mi piel al mismo tiempo. Súper recomendada.", "author": "Daniela F.", "location": "Santiago" },
+    { "quote": "Tenía acné adulto que me daba mucha vergüenza. Barbara me explicó las causas reales y cómo tratarlo. Hoy mi piel está tranquila y sin inflamación.", "author": "Andrea P.", "location": "Concepción" },
+    { "quote": "La consulta express vale muchísimo para cuando tienes una duda puntual. Rápida, directa y con información de verdad.", "author": "Javiera M.", "location": "Santiago" },
+    { "quote": "La asesoría personalizada fue una inversión que se pagó sola. Dejé de comprar cosas al azar y ahora sé exactamente qué necesita mi piel.", "author": "Fernanda L.", "location": "Santiago" },
+    { "quote": "Llevo 3 meses aplicando la rutina que me dio Barbara y recibo comentarios sobre mi piel constantemente. Gracias por compartir tanto conocimiento.", "author": "Pilar C.", "location": "Valparaíso" }
+  ]
+}

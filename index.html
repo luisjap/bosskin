@@ -1334,6 +1334,83 @@
       }
     });
   });
+
+  /* ── Carga dinámica de contenido y servicios desde admin ──────────────── */
+  async function loadSiteContent() {
+    try {
+      const [cntRes, svcRes] = await Promise.all([fetch('/api/content'), fetch('/api/services')]);
+      const cnt  = await cntRes.json();
+      const svcs = await svcRes.json();
+      applyContent(cnt);
+      applyServices(svcs);
+    } catch(_) {}
+  }
+
+  function applyContent(c) {
+    const $  = sel => document.querySelector(sel);
+    const $$ = sel => document.querySelectorAll(sel);
+
+    // WhatsApp
+    if (c.contact?.whatsapp) {
+      const wa = c.contact.whatsapp.replace(/\D/g,'');
+      $$('a[href*="wa.me"]').forEach(a => a.href = `https://wa.me/${wa}`);
+    }
+    // Email
+    if (c.contact?.email) {
+      $$('a[href^="mailto"]').forEach(a => { a.href = `mailto:${c.contact.email}`; if (a.textContent.includes('<!--')) a.textContent = c.contact.email; });
+    }
+    // Redes sociales
+    if (c.contact?.instagram) $$('a[aria-label="Instagram"]').forEach(a => a.href = c.contact.instagram);
+    if (c.contact?.tiktok)    $$('a[aria-label="TikTok"]').forEach(a =>    a.href = c.contact.tiktok);
+
+    // Hero
+    if (c.hero?.badge)    { const el = $('.hero-tag');  if (el) { const dot = el.querySelector('::before'); el.textContent = c.hero.badge; } }
+    if (c.hero?.subtitle) { const el = $('.hero-sub');  if (el) el.textContent = c.hero.subtitle; }
+    if (c.hero?.trustText){ const el = $('.hero-trust-txt strong'); if (el) el.textContent = c.hero.trustText; }
+
+    // CTA
+    if (c.cta?.tag)      { const el = $('.cta-tag');  if (el) { el.innerHTML = `<span style="display:inline-block;width:6px;height:6px;background:var(--emerald);border-radius:50%"></span> ${c.cta.tag}`; } }
+    if (c.cta?.subtitle) { const el = $('.cta-s');    if (el) el.textContent = c.cta.subtitle; }
+    if (c.cta?.title) {
+      const el = $('.cta-t');
+      if (el) el.innerHTML = c.cta.title.replace(/\n/g,'<br>').replace(/(tu piel)/i,'<em>$1</em>');
+    }
+
+    // Footer
+    if (c.footer?.description) { const el = $('.footer-desc'); if (el) el.textContent = c.footer.description; }
+    if (c.footer?.copyright)   { const el = document.querySelector('.footer-btm span'); if (el) el.textContent = c.footer.copyright; }
+
+    // Testimonio principal
+    if (c.testimonialMain?.quote)  { const el = $('.testi-q');    if (el) el.textContent = `"${c.testimonialMain.quote}"`; }
+    if (c.testimonialMain?.author) { const el = $('.testi-name'); if (el) el.textContent = c.testimonialMain.author; }
+    if (c.testimonialMain?.city)   { const el = $('.testi-city'); if (el) el.textContent = c.testimonialMain.city;   }
+
+    // Reseñas
+    if (c.reviews?.length) {
+      const cards = $$('.review-card');
+      c.reviews.forEach((r, i) => {
+        if (!cards[i]) return;
+        const qt = cards[i].querySelector('.review-text');
+        const an = cards[i].querySelector('.review-name');
+        const al = cards[i].querySelector('.review-loc');
+        if (qt) qt.textContent = `"${r.quote}"`;
+        if (an) an.textContent = r.author;
+        if (al) al.textContent = r.location;
+      });
+    }
+  }
+
+  function applyServices(svcs) {
+    if (!svcs?.length) return;
+    svcs.forEach(s => {
+      if (BK_SERVICES[s.key]) {
+        BK_SERVICES[s.key].name  = s.name;
+        BK_SERVICES[s.key].price = s.price;
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', loadSiteContent);
 </script>
 </body>
 </html>

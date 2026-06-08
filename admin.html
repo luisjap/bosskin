@@ -123,6 +123,81 @@
     .blocked-empty { font-size: .83rem; color: var(--g-mid); }
     /* Auto-refresh indicator */
     .refresh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); display: inline-block; margin-right: 6px; animation: waPulse 2s infinite; }
+
+    /* ── Desktop tabs ── */
+    .d-tabs { display: flex; gap: 4px; margin-bottom: 28px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 4px; width: fit-content; }
+    .d-tab { background: none; border: none; color: var(--g-mid); font-family: var(--font-b); font-size: .85rem; font-weight: 500; padding: 8px 20px; border-radius: 7px; cursor: pointer; transition: all .2s; white-space: nowrap; }
+    .d-tab.active { background: var(--emerald); color: #fff; }
+    .d-tab:hover:not(.active) { background: rgba(255,255,255,.06); color: var(--white); }
+    .d-panel { display: none; } .d-panel.active { display: block; }
+
+    /* ── Config cards ── */
+    .cfg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; margin-bottom: 32px; }
+    .cfg-card { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; overflow: hidden; }
+    .cfg-card-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .cfg-card-name { font-family: var(--font-t); font-size: 1.05rem; font-weight: 700; color: var(--white); }
+    .cfg-card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .cfg-field { display: flex; flex-direction: column; gap: 5px; }
+    .cfg-field label { font-size: .69rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.35); }
+    .cfg-input { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 9px 12px; color: var(--white); font-family: var(--font-b); font-size: .88rem; outline: none; transition: border-color .2s; width: 100%; }
+    .cfg-input:focus { border-color: var(--emerald); }
+    .cfg-textarea { resize: vertical; min-height: 72px; line-height: 1.55; }
+    .cfg-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .cfg-features { display: flex; flex-direction: column; gap: 6px; }
+    .cfg-feat-row { display: flex; gap: 6px; }
+    .cfg-feat-row input { flex: 1; }
+    .cfg-feat-row button { background: rgba(224,82,82,.1); border: 1px solid rgba(224,82,82,.25); color: #f87171; border-radius: 6px; padding: 0 10px; cursor: pointer; font-size: .85rem; }
+    .cfg-add-feat { background: rgba(26,107,74,.1); border: 1px solid rgba(26,107,74,.25); color: var(--emerald-lt); font-family: var(--font-b); font-size: .78rem; padding: 7px 12px; border-radius: 7px; cursor: pointer; width: 100%; margin-top: 4px; }
+    .cfg-section-title { font-family: var(--font-t); font-size: 1.1rem; font-weight: 700; color: var(--white); margin-bottom: 16px; margin-top: 8px; display: flex; align-items: center; gap: 10px; }
+    .cfg-section-title::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.07); }
+
+    /* ── Toggle switch ── */
+    .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,.12); border-radius: 100px; cursor: pointer; transition: background .25s; }
+    .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .25s; }
+    .toggle input:checked + .toggle-slider { background: var(--emerald); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* ── Schedule editor ── */
+    .sch-section { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+    .sch-label { font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.35); margin-bottom: 12px; }
+    .sch-days { display: flex; gap: 8px; flex-wrap: wrap; }
+    .day-btn { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(255,255,255,.12); background: none; color: var(--g-mid); font-family: var(--font-b); font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .day-btn.active { border-color: var(--emerald); background: rgba(26,107,74,.2); color: var(--emerald-lt); }
+    .slots-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .slot-btn { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: var(--g-mid); font-family: var(--font-b); font-size: .81rem; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: all .2s; }
+    .slot-btn.active { background: rgba(26,107,74,.2); border-color: var(--emerald); color: var(--emerald-lt); font-weight: 600; }
+    .sch-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .add-slot-row { display: flex; gap: 8px; margin-top: 10px; }
+    .add-slot-row input { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 8px 12px; color: var(--white); font-family: var(--font-b); font-size: .85rem; outline: none; }
+    .add-slot-row button { background: rgba(26,107,74,.15); border: 1px solid rgba(26,107,74,.3); color: var(--emerald-lt); font-family: var(--font-b); font-size: .82rem; padding: 8px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+
+    /* ── Content editor ── */
+    .cnt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+    .cnt-card { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .cnt-card-title { font-family: var(--font-t); font-size: 1rem; font-weight: 700; color: var(--white); padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .review-editor { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+
+    /* ── Images grid ── */
+    .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+    .img-card { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; overflow: hidden; }
+    .img-preview { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: rgba(255,255,255,.05); }
+    .img-card-body { padding: 12px; }
+    .img-label { font-size: .78rem; color: var(--g-mid); margin-bottom: 8px; }
+    .img-upload-btn { width: 100%; background: rgba(26,107,74,.1); border: 1px solid rgba(26,107,74,.25); color: var(--emerald-lt); font-family: var(--font-b); font-size: .8rem; padding: 8px; border-radius: 7px; cursor: pointer; text-align: center; }
+    input[type="file"].hidden-file { display: none; }
+
+    /* ── Save bar ── */
+    .save-bar { display: flex; align-items: center; justify-content: space-between; background: rgba(26,107,74,.08); border: 1px solid rgba(26,107,74,.2); border-radius: 10px; padding: 14px 20px; margin-bottom: 22px; }
+    .save-bar-msg { font-size: .85rem; color: var(--emerald-lt); }
+    .btn-save { background: var(--emerald); border: none; color: #fff; font-family: var(--font-b); font-size: .88rem; font-weight: 600; padding: 10px 24px; border-radius: 8px; cursor: pointer; transition: background .2s; }
+    .btn-save:hover { background: var(--emerald-h); }
+    .btn-save:disabled { background: rgba(26,107,74,.4); cursor: wait; }
+
+    /* ── Desktop toast ── */
+    #d-toast { position: fixed; bottom: 28px; right: 28px; background: #1a1a1a; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: .85rem; box-shadow: 0 8px 28px rgba(0,0,0,.5); z-index: 500; opacity: 0; transition: all .3s; pointer-events: none; border-left: 3px solid var(--emerald); }
+    #d-toast.show { opacity: 1; }
     @media (max-width: 900px) {
       .stats { grid-template-columns: repeat(2,1fr); }
     }
@@ -314,8 +389,17 @@
   </header>
 
   <main>
+    <!-- Desktop tabs -->
+    <div class="d-tabs" id="d-tabs">
+      <button class="d-tab active" id="dtab-reservas" onclick="switchDesktopTab('reservas')">📋 Reservas</button>
+      <button class="d-tab" id="dtab-config"   onclick="switchDesktopTab('config')">⚙️ Servicios &amp; Horarios</button>
+      <button class="d-tab" id="dtab-contenido" onclick="switchDesktopTab('contenido')">✏️ Contenido &amp; Imágenes</button>
+    </div>
+
     <div class="stats" id="stats-row"></div>
 
+    <!-- Panel: Reservas -->
+    <div class="d-panel active" id="dtab-panel-reservas">
     <div class="tbar">
       <span class="tbar-title">Reservas</span>
       <input class="filter-inp" type="date" id="filter-date" onchange="renderTable()" title="Filtrar por fecha">
@@ -341,21 +425,140 @@
       <table>
         <thead>
           <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Teléfono</th>
-            <th>Servicio</th>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Estado</th>
-            <th>Agendado</th>
-            <th></th>
+            <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Servicio</th>
+            <th>Fecha</th><th>Hora</th><th>Estado</th><th>Agendado</th><th></th>
           </tr>
         </thead>
         <tbody id="table-body"></tbody>
       </table>
     </div>
+    </div><!-- /panel reservas -->
+
+    <!-- Panel: Configuración -->
+    <div class="d-panel" id="dtab-panel-config">
+      <div class="save-bar">
+        <span class="save-bar-msg">💡 Edita los servicios y horarios disponibles para tus clientes.</span>
+        <button class="btn-save" id="btn-save-config" onclick="saveConfig()">Guardar cambios</button>
+      </div>
+
+      <div class="cfg-section-title">Servicios</div>
+      <div class="cfg-grid" id="cfg-services-grid"></div>
+
+      <div class="cfg-section-title">Horarios disponibles</div>
+      <div class="sch-section">
+        <div class="sch-label">Días de atención</div>
+        <div class="sch-days" id="sch-days"></div>
+      </div>
+      <div class="sch-section">
+        <div class="sch-label">Horarios disponibles</div>
+        <div class="slots-grid" id="slots-grid"></div>
+        <div class="add-slot-row">
+          <input type="time" id="new-slot-input" step="1800">
+          <button onclick="addSlot()">+ Agregar horario</button>
+        </div>
+      </div>
+      <div class="sch-section">
+        <div class="sch-label">Reglas de reserva</div>
+        <div class="sch-settings">
+          <div class="cfg-field">
+            <label>Anticipación mínima (horas)</label>
+            <input class="cfg-input" type="number" id="sch-min-advance" min="0" max="168" value="2">
+          </div>
+          <div class="cfg-field">
+            <label>Días máximos en el futuro</label>
+            <input class="cfg-input" type="number" id="sch-max-days" min="1" max="365" value="60">
+          </div>
+        </div>
+      </div>
+    </div><!-- /panel config -->
+
+    <!-- Panel: Contenido -->
+    <div class="d-panel" id="dtab-panel-contenido">
+      <div class="save-bar">
+        <span class="save-bar-msg">✏️ Edita textos, datos de contacto e imágenes del sitio.</span>
+        <button class="btn-save" id="btn-save-content" onclick="saveContent()">Guardar cambios</button>
+      </div>
+
+      <div class="cfg-section-title">Contacto &amp; Redes Sociales</div>
+      <div class="cfg-grid">
+        <div class="cnt-card">
+          <div class="cnt-card-title">📞 Datos de contacto</div>
+          <div class="cfg-field"><label>WhatsApp (ej: 56912345678)</label><input class="cfg-input" type="tel" id="cnt-whatsapp" placeholder="+56 9 1234 5678"></div>
+          <div class="cfg-field"><label>Email de contacto</label><input class="cfg-input" type="email" id="cnt-email" placeholder="barbara@email.com"></div>
+          <div class="cfg-field"><label>Instagram URL</label><input class="cfg-input" type="url" id="cnt-instagram"></div>
+          <div class="cfg-field"><label>TikTok URL</label><input class="cfg-input" type="url" id="cnt-tiktok"></div>
+        </div>
+        <div class="cnt-card">
+          <div class="cnt-card-title">🦸 Sección Hero</div>
+          <div class="cfg-field"><label>Etiqueta (badge)</label><input class="cfg-input" type="text" id="cnt-hero-badge"></div>
+          <div class="cfg-field"><label>Título principal</label><textarea class="cfg-input cfg-textarea" id="cnt-hero-title" rows="2"></textarea></div>
+          <div class="cfg-field"><label>Subtítulo</label><textarea class="cfg-input cfg-textarea" id="cnt-hero-subtitle" rows="3"></textarea></div>
+          <div class="cfg-field"><label>Texto de confianza</label><input class="cfg-input" type="text" id="cnt-hero-trust"></div>
+        </div>
+        <div class="cnt-card">
+          <div class="cnt-card-title">🎯 Sección CTA</div>
+          <div class="cfg-field"><label>Etiqueta</label><input class="cfg-input" type="text" id="cnt-cta-tag"></div>
+          <div class="cfg-field"><label>Título</label><textarea class="cfg-input cfg-textarea" id="cnt-cta-title" rows="2"></textarea></div>
+          <div class="cfg-field"><label>Subtítulo</label><textarea class="cfg-input cfg-textarea" id="cnt-cta-subtitle" rows="2"></textarea></div>
+        </div>
+        <div class="cnt-card">
+          <div class="cnt-card-title">🦶 Footer</div>
+          <div class="cfg-field"><label>Descripción</label><textarea class="cfg-input cfg-textarea" id="cnt-footer-desc" rows="3"></textarea></div>
+          <div class="cfg-field"><label>Texto copyright</label><input class="cfg-input" type="text" id="cnt-footer-copy"></div>
+        </div>
+        <div class="cnt-card" style="grid-column: 1/-1">
+          <div class="cnt-card-title">⭐ Testimonio principal</div>
+          <div class="cfg-field"><label>Cita</label><textarea class="cfg-input cfg-textarea" id="cnt-testi-quote" rows="3"></textarea></div>
+          <div class="cfg-row-2">
+            <div class="cfg-field"><label>Nombre</label><input class="cfg-input" type="text" id="cnt-testi-author"></div>
+            <div class="cfg-field"><label>Ciudad</label><input class="cfg-input" type="text" id="cnt-testi-city"></div>
+          </div>
+        </div>
+        <div class="cnt-card" style="grid-column: 1/-1">
+          <div class="cnt-card-title">💬 Reseñas</div>
+          <div id="cnt-reviews-list"></div>
+        </div>
+      </div>
+
+      <div class="cfg-section-title" style="margin-top:32px">Imágenes</div>
+      <div class="img-grid" id="img-grid">
+        <div class="img-card">
+          <img class="img-preview" id="img-preview-barbara" src="/images/barbara.jpg" onerror="this.src=''" alt="Barbara">
+          <div class="img-card-body">
+            <div class="img-label">Foto de Barbara (hero)</div>
+            <label class="img-upload-btn" for="img-barbara">📁 Cambiar imagen</label>
+            <input type="file" id="img-barbara" class="hidden-file" accept="image/*" onchange="uploadImage('barbara',this)">
+          </div>
+        </div>
+        <div class="img-card">
+          <img class="img-preview" id="img-preview-consulta-express" src="/images/consulta-express.jpg" onerror="this.src=''" alt="Consulta Express">
+          <div class="img-card-body">
+            <div class="img-label">Consulta Express</div>
+            <label class="img-upload-btn" for="img-express">📁 Cambiar imagen</label>
+            <input type="file" id="img-express" class="hidden-file" accept="image/*" onchange="uploadImage('consulta-express',this)">
+          </div>
+        </div>
+        <div class="img-card">
+          <img class="img-preview" id="img-preview-asesoria-personalizada" src="/images/asesoria-personalizada.jpg" onerror="this.src=''" alt="Asesoría">
+          <div class="img-card-body">
+            <div class="img-label">Asesoría Personalizada</div>
+            <label class="img-upload-btn" for="img-asesoria">📁 Cambiar imagen</label>
+            <input type="file" id="img-asesoria" class="hidden-file" accept="image/*" onchange="uploadImage('asesoria-personalizada',this)">
+          </div>
+        </div>
+        <div class="img-card">
+          <img class="img-preview" id="img-preview-revision-productos" src="/images/revision-productos.jpg" onerror="this.src=''" alt="Revisión">
+          <div class="img-card-body">
+            <div class="img-label">Revisión de Productos</div>
+            <label class="img-upload-btn" for="img-revision">📁 Cambiar imagen</label>
+            <input type="file" id="img-revision" class="hidden-file" accept="image/*" onchange="uploadImage('revision-productos',this)">
+          </div>
+        </div>
+      </div>
+    </div><!-- /panel contenido -->
+
   </main>
+  <div id="d-toast"></div>
 </div>
 
 <!-- ══ MOBILE TABS ══════════════════════════════════════════════════════════ -->
@@ -892,6 +1095,268 @@
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('show');
     init();
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DESKTOP TABS
+  ══════════════════════════════════════════════════════════════════════════ */
+  function switchDesktopTab(tab) {
+    ['reservas','config','contenido'].forEach(t => {
+      document.getElementById(`dtab-${t}`)?.classList.toggle('active', t === tab);
+      document.getElementById(`dtab-panel-${t}`)?.classList.toggle('active', t === tab);
+    });
+    if (tab === 'config')    loadConfigEditor();
+    if (tab === 'contenido') loadContentEditor();
+  }
+
+  function showDToast(msg, ok = true) {
+    const t = document.getElementById('d-toast');
+    t.textContent = msg;
+    t.style.borderLeftColor = ok ? 'var(--emerald)' : '#f87171';
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CONFIG — SERVICIOS Y HORARIOS
+  ══════════════════════════════════════════════════════════════════════════ */
+  let _cfg = null;
+
+  async function loadConfigEditor() {
+    if (_cfg) { renderConfigEditor(); return; }
+    const res = await fetch('/api/admin/config', { headers: authHeader() });
+    _cfg = await res.json();
+    renderConfigEditor();
+  }
+
+  function renderConfigEditor() {
+    renderServicesGrid();
+    renderScheduleEditor();
+  }
+
+  function renderServicesGrid() {
+    const grid = document.getElementById('cfg-services-grid');
+    if (!grid) return;
+    grid.innerHTML = _cfg.services.map((svc, i) => `
+      <div class="cfg-card">
+        <div class="cfg-card-head">
+          <span class="cfg-card-name">${esc(svc.name)}</span>
+          <label class="toggle" title="${svc.active ? 'Activo' : 'Inactivo'}">
+            <input type="checkbox" ${svc.active ? 'checked' : ''} onchange="_cfg.services[${i}].active=this.checked">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="cfg-card-body">
+          <div class="cfg-field">
+            <label>Nombre del servicio</label>
+            <input class="cfg-input" type="text" value="${esc(svc.name)}" oninput="_cfg.services[${i}].name=this.value">
+          </div>
+          <div class="cfg-row-2">
+            <div class="cfg-field">
+              <label>Precio (CLP)</label>
+              <input class="cfg-input" type="number" value="${svc.price}" min="0" oninput="_cfg.services[${i}].price=parseInt(this.value)||0">
+            </div>
+            <div class="cfg-field">
+              <label>Duración (min)</label>
+              <input class="cfg-input" type="number" value="${svc.duration}" min="5" max="240" oninput="_cfg.services[${i}].duration=parseInt(this.value)||30">
+            </div>
+          </div>
+          <div class="cfg-field">
+            <label>Descripción corta</label>
+            <textarea class="cfg-input cfg-textarea" oninput="_cfg.services[${i}].description=this.value">${esc(svc.description||'')}</textarea>
+          </div>
+          <div class="cfg-field">
+            <label>Características (una por línea)</label>
+            <textarea class="cfg-input cfg-textarea" rows="4" oninput="_cfg.services[${i}].features=this.value.split('\n').filter(l=>l.trim())">${(svc.features||[]).join('\n')}</textarea>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  const DAY_NAMES = ['D','L','M','X','J','V','S'];
+  const ALL_POSSIBLE_SLOTS = ['07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00'];
+
+  function renderScheduleEditor() {
+    // Días
+    const daysEl = document.getElementById('sch-days');
+    if (daysEl) {
+      daysEl.innerHTML = DAY_NAMES.map((d, i) => `
+        <button class="day-btn ${_cfg.schedule.workdays.includes(i) ? 'active' : ''}" data-day="${i}" onclick="toggleDay(${i},this)">${d}</button>
+      `).join('');
+    }
+
+    // Slots
+    const slotsEl = document.getElementById('slots-grid');
+    if (slotsEl) {
+      const knownSlots = new Set([..._cfg.schedule.slots, ...ALL_POSSIBLE_SLOTS]);
+      slotsEl.innerHTML = [...knownSlots].sort().map(t => `
+        <button class="slot-btn ${_cfg.schedule.slots.includes(t) ? 'active' : ''}" data-time="${t}" onclick="toggleSlot('${t}',this)">${t}</button>
+      `).join('');
+    }
+
+    // Settings
+    const minAdv = document.getElementById('sch-min-advance');
+    const maxDays = document.getElementById('sch-max-days');
+    if (minAdv)  { minAdv.value  = _cfg.schedule.minAdvanceHours ?? 2;  minAdv.oninput  = () => { _cfg.schedule.minAdvanceHours  = parseInt(minAdv.value)  || 0; }; }
+    if (maxDays) { maxDays.value = _cfg.schedule.maxAdvanceDays  ?? 60; maxDays.oninput = () => { _cfg.schedule.maxAdvanceDays   = parseInt(maxDays.value) || 30; }; }
+  }
+
+  function toggleDay(day, btn) {
+    const idx = _cfg.schedule.workdays.indexOf(day);
+    if (idx === -1) _cfg.schedule.workdays.push(day);
+    else            _cfg.schedule.workdays.splice(idx, 1);
+    _cfg.schedule.workdays.sort();
+    btn.classList.toggle('active');
+  }
+
+  function toggleSlot(time, btn) {
+    const idx = _cfg.schedule.slots.indexOf(time);
+    if (idx === -1) { _cfg.schedule.slots.push(time); _cfg.schedule.slots.sort(); }
+    else            { _cfg.schedule.slots.splice(idx, 1); }
+    btn.classList.toggle('active');
+  }
+
+  function addSlot() {
+    const input = document.getElementById('new-slot-input');
+    const t = input.value;
+    if (!t || _cfg.schedule.slots.includes(t)) return;
+    _cfg.schedule.slots.push(t);
+    _cfg.schedule.slots.sort();
+    input.value = '';
+    renderScheduleEditor();
+  }
+
+  async function saveConfig() {
+    const btn = document.getElementById('btn-save-config');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const res = await fetch('/api/admin/config', { method:'PUT', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify(_cfg) });
+      if (res.ok) showDToast('✓ Configuración guardada correctamente');
+      else        showDToast('✗ Error al guardar', false);
+    } catch { showDToast('✗ Error de conexión', false); }
+    btn.disabled = false; btn.textContent = 'Guardar cambios';
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CONTENIDO — TEXTOS E IMÁGENES
+  ══════════════════════════════════════════════════════════════════════════ */
+  let _cnt = null;
+
+  async function loadContentEditor() {
+    if (_cnt) { renderContentEditor(); return; }
+    const res = await fetch('/api/admin/content', { headers: authHeader() });
+    _cnt = await res.json();
+    renderContentEditor();
+  }
+
+  function setVal(id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; }
+
+  function renderContentEditor() {
+    const c = _cnt;
+    // Contacto
+    setVal('cnt-whatsapp',      c.contact?.whatsapp   || '');
+    setVal('cnt-email',         c.contact?.email      || '');
+    setVal('cnt-instagram',     c.contact?.instagram  || '');
+    setVal('cnt-tiktok',        c.contact?.tiktok     || '');
+    // Hero
+    setVal('cnt-hero-badge',    c.hero?.badge    || '');
+    setVal('cnt-hero-title',    c.hero?.title    || '');
+    setVal('cnt-hero-subtitle', c.hero?.subtitle || '');
+    setVal('cnt-hero-trust',    c.hero?.trustText|| '');
+    // CTA
+    setVal('cnt-cta-tag',      c.cta?.tag      || '');
+    setVal('cnt-cta-title',    c.cta?.title    || '');
+    setVal('cnt-cta-subtitle', c.cta?.subtitle || '');
+    // Footer
+    setVal('cnt-footer-desc', c.footer?.description || '');
+    setVal('cnt-footer-copy', c.footer?.copyright   || '');
+    // Testimonio principal
+    setVal('cnt-testi-quote',  c.testimonialMain?.quote  || '');
+    setVal('cnt-testi-author', c.testimonialMain?.author || '');
+    setVal('cnt-testi-city',   c.testimonialMain?.city   || '');
+
+    // Reseñas
+    const rl = document.getElementById('cnt-reviews-list');
+    if (rl) {
+      rl.innerHTML = (c.reviews || []).map((r, i) => `
+        <div class="review-editor">
+          <div class="cfg-field"><label>Reseña ${i+1} — Cita</label><textarea class="cfg-input" rows="2" oninput="_cnt.reviews[${i}].quote=this.value">${esc(r.quote)}</textarea></div>
+          <div class="cfg-row-2">
+            <div class="cfg-field"><label>Nombre</label><input class="cfg-input" type="text" value="${esc(r.author)}" oninput="_cnt.reviews[${i}].author=this.value"></div>
+            <div class="cfg-field"><label>Ciudad</label><input class="cfg-input" type="text" value="${esc(r.location||'')}" oninput="_cnt.reviews[${i}].location=this.value"></div>
+          </div>
+        </div>`).join('') + `<button class="cfg-add-feat" onclick="addReview()">+ Agregar reseña</button>`;
+    }
+  }
+
+  function addReview() {
+    if (!_cnt.reviews) _cnt.reviews = [];
+    _cnt.reviews.push({ quote:'', author:'', location:'' });
+    renderContentEditor();
+  }
+
+  function collectContent() {
+    return {
+      contact: {
+        whatsapp:  document.getElementById('cnt-whatsapp')?.value  || '',
+        email:     document.getElementById('cnt-email')?.value     || '',
+        instagram: document.getElementById('cnt-instagram')?.value || '',
+        tiktok:    document.getElementById('cnt-tiktok')?.value    || '',
+      },
+      hero: {
+        ..._cnt.hero,
+        badge:     document.getElementById('cnt-hero-badge')?.value    || '',
+        title:     document.getElementById('cnt-hero-title')?.value    || '',
+        subtitle:  document.getElementById('cnt-hero-subtitle')?.value || '',
+        trustText: document.getElementById('cnt-hero-trust')?.value    || '',
+      },
+      cta: {
+        tag:      document.getElementById('cnt-cta-tag')?.value      || '',
+        title:    document.getElementById('cnt-cta-title')?.value    || '',
+        subtitle: document.getElementById('cnt-cta-subtitle')?.value || '',
+      },
+      footer: {
+        description: document.getElementById('cnt-footer-desc')?.value || '',
+        copyright:   document.getElementById('cnt-footer-copy')?.value || '',
+      },
+      testimonialMain: {
+        quote:  document.getElementById('cnt-testi-quote')?.value  || '',
+        author: document.getElementById('cnt-testi-author')?.value || '',
+        city:   document.getElementById('cnt-testi-city')?.value   || '',
+      },
+      reviews: _cnt.reviews || [],
+    };
+  }
+
+  async function saveContent() {
+    const btn = document.getElementById('btn-save-content');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    const data = collectContent();
+    try {
+      const res = await fetch('/api/admin/content', { method:'PUT', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify(data) });
+      if (res.ok) { _cnt = data; showDToast('✓ Contenido guardado — los cambios ya son visibles en el sitio'); }
+      else        showDToast('✗ Error al guardar', false);
+    } catch { showDToast('✗ Error de conexión', false); }
+    btn.disabled = false; btn.textContent = 'Guardar cambios';
+  }
+
+  async function uploadImage(slot, input) {
+    const file = input.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('slot', slot);
+    const res = await fetch('/api/admin/upload', { method:'POST', headers: authHeader(), body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      const preview = document.getElementById(`img-preview-${slot}`);
+      if (preview) preview.src = data.path + '?t=' + Date.now();
+      showDToast(`✓ Imagen "${slot}" actualizada`);
+    } else {
+      showDToast('✗ Error al subir imagen', false);
+    }
+    input.value = '';
   }
 </script>
 </body>
