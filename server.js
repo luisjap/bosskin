@@ -601,6 +601,30 @@ app.delete('/api/admin/blocked-slots/:date/:time', adminLimiter, adminAuth, (req
   res.json({ ok:true });
 });
 
+/* ── Bloqueo masivo de fechas (día completo o mes entero) ─────────────────── */
+app.post('/api/admin/blocked-bulk', adminLimiter, adminAuth, (req, res) => {
+  const { dates } = req.body;
+  if (!Array.isArray(dates) || !dates.length || dates.some(d => !DATE_RE.test(d)))
+    return res.status(400).json({ error: 'Fechas inválidas' });
+  const bl = readBlocked();
+  let added = 0;
+  dates.forEach(d => { if (!bl.dates.includes(d)) { bl.dates.push(d); added++; } });
+  writeBlocked(bl);
+  res.json({ ok: true, added });
+});
+
+app.delete('/api/admin/blocked-bulk', adminLimiter, adminAuth, (req, res) => {
+  const { dates } = req.body;
+  if (!Array.isArray(dates) || !dates.length || dates.some(d => !DATE_RE.test(d)))
+    return res.status(400).json({ error: 'Fechas inválidas' });
+  const bl = readBlocked();
+  const set = new Set(dates);
+  const before = bl.dates.length;
+  bl.dates = bl.dates.filter(d => !set.has(d));
+  writeBlocked(bl);
+  res.json({ ok: true, removed: before - bl.dates.length });
+});
+
 /* ── Export config/content como JSON (para sincronizar con repo) ──────────── */
 app.get('/api/admin/export', adminLimiter, adminAuth, (req, res) => {
   res.json({ config: readConfig(), content: readContent() });

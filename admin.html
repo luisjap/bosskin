@@ -527,6 +527,10 @@
             <span class="cal-month" id="cal-month-lbl"></span>
             <button class="cal-nav-btn" onclick="calNext()">›</button>
           </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <button class="btn-sm danger" onclick="blockMonth()" style="flex:1" title="Bloquea todos los días laborables del mes actual">🔒 Bloquear mes</button>
+            <button class="btn-sm accent"  onclick="unblockMonth()" style="flex:1" title="Libera todos los días bloqueados del mes actual">🔓 Liberar mes</button>
+          </div>
           <div class="cal-grid" id="cal-grid"></div>
         </div>
         <div class="day-panel" id="day-panel">
@@ -1603,8 +1607,13 @@
     const blocked   = data.slots.filter(s => s.status === 'blocked').length;
 
     const fullBlockBar = data.fullBlocked
-      ? `<div class="day-fullblock-bar">⛔ Día completo bloqueado — desbloquear en "Fechas bloqueadas"</div>`
-      : '';
+      ? `<div class="day-fullblock-bar" style="justify-content:space-between;align-items:center">
+           <span>⛔ Día completo bloqueado</span>
+           <button class="btn-sm" style="background:rgba(26,107,74,.15);border-color:rgba(26,107,74,.4);color:var(--emerald-lt);padding:5px 12px" onclick="unblockFullDay('${date}')">🔓 Desbloquear día</button>
+         </div>`
+      : `<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+           <button class="btn-sm danger" onclick="blockFullDay('${date}')">🔒 Bloquear día completo</button>
+         </div>`;
 
     const slotsHTML = data.slots.map(s => {
       if (s.status === 'booked') {
@@ -1659,6 +1668,64 @@
     loadDayPanel(date);
     calLoad();
     showDToast(`✓ ${time} desbloqueado`);
+  }
+
+  /* ── Bloquear / desbloquear día completo ──────────────────────────────── */
+  async function blockFullDay(date) {
+    await apiFetch('/api/admin/blocked', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date}) });
+    const label = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+    showDToast(`✓ ${label} — día completo bloqueado`);
+    calLoad();
+    loadDayPanel(date);
+    renderBlocked();
+  }
+
+  async function unblockFullDay(date) {
+    await apiFetch(`/api/admin/blocked/${date}`, { method:'DELETE' });
+    const label = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+    showDToast(`✓ ${label} — día desbloqueado`);
+    calLoad();
+    loadDayPanel(date);
+    renderBlocked();
+  }
+
+  /* ── Bloquear / liberar mes completo ──────────────────────────────────── */
+  function _getMonthDates(onlyWorkdays) {
+    const workdays = _cfg?.schedule?.workdays || [1,2,3,4,5];
+    const daysInMonth = new Date(_calYear, _calMonth, 0).getDate();
+    const dates = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${_calYear}-${String(_calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      if (!onlyWorkdays) { dates.push(dateStr); continue; }
+      const jsDay = new Date(_calYear, _calMonth - 1, d).getDay();
+      if (workdays.includes(jsDay)) dates.push(dateStr);
+    }
+    return dates;
+  }
+
+  async function blockMonth() {
+    const monthName = new Date(_calYear, _calMonth - 1, 1).toLocaleDateString('es-CL', { month:'long', year:'numeric' });
+    if (!confirm(`¿Bloquear todos los días laborables de ${monthName}?`)) return;
+    const dates = _getMonthDates(true);
+    if (!dates.length) return showDToast('Sin días laborables que bloquear', false);
+    const res  = await apiFetch('/api/admin/blocked-bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dates}) });
+    const data = await res.json();
+    showDToast(`✓ ${data.added} días bloqueados en ${monthName}`);
+    calLoad();
+    if (_calSelected) loadDayPanel(_calSelected);
+    renderBlocked();
+  }
+
+  async function unblockMonth() {
+    const monthName = new Date(_calYear, _calMonth - 1, 1).toLocaleDateString('es-CL', { month:'long', year:'numeric' });
+    if (!confirm(`¿Liberar todos los días bloqueados de ${monthName}?`)) return;
+    const dates = _getMonthDates(false);
+    const res  = await apiFetch('/api/admin/blocked-bulk', { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dates}) });
+    const data = await res.json();
+    showDToast(data.removed ? `✓ ${data.removed} días liberados en ${monthName}` : `Sin días bloqueados en ${monthName}`);
+    calLoad();
+    if (_calSelected) loadDayPanel(_calSelected);
+    renderBlocked();
   }
 
   async function exportAndDownload() {
