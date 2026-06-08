@@ -49,7 +49,7 @@ const DEFAULT_CONFIG = {
     { key:'asesoria', name:'Asesoría Personalizada', price:20000, duration:60, active:true, description:'Sesión de 60 minutos donde analizamos tu piel en profundidad.', features:['60 min de sesión completa','Rutina completa por escrito','Lista de productos reales','Seguimiento incluido'] },
     { key:'revision', name:'Revisión de Productos',  price:10000, duration:20, active:true, description:'Revisamos los productos que ya tienes o planeas comprar.', features:['20 minutos de sesión','Hasta 10 productos revisados','Análisis de ingredientes'] },
   ],
-  schedule: { slots:['11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'], workdays:[1,2,3,4,5], minAdvanceHours:2, maxAdvanceDays:60, openUntil:null },
+  schedule: { slots:['11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30','19:00'], workdays:[0,1,2,3,4,5,6], minAdvanceHours:2, maxAdvanceDays:60, openUntil:null },
 };
 
 function readConfig() {
