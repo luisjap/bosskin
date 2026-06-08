@@ -54,7 +54,10 @@
 
     if (id) {
       try {
-        const r = await fetch(`/api/bookings/${id}`);
+        const controller = new AbortController();
+        const timeout    = setTimeout(() => controller.abort(), 8000);
+        const r = await fetch(`/api/bookings/${id}`, { signal: controller.signal });
+        clearTimeout(timeout);
         if (r.ok) booking = await r.json();
       } catch (_) {}
     }
@@ -89,12 +92,13 @@
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
         <h1>Pago en proceso</h1>
-        <p class="sub">Tu pago está siendo procesado. Cuando se confirme recibirás un correo con los detalles de tu sesión.</p>
+        <p class="sub">Tu pago está siendo verificado. Esto ocurre con pagos en efectivo o transferencias bancarias y puede tardar hasta 24 horas. Cuando se confirme recibirás un correo con los detalles de tu sesión.</p>
         ${booking ? `
         <div class="detail show">
           <div class="detail-row"><span class="dr-label">Fecha reservada</span><span class="dr-val">${dateStr}</span></div>
           <div class="detail-row"><span class="dr-label">Hora</span><span class="dr-val">${booking.time} hrs</span></div>
-        </div>` : ''}
+        </div>
+        <p style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:12px">¿Tienes dudas? Escribe a <a href="mailto:reservas@bosskinlab.com" style="color:var(--emerald-lt)">reservas@bosskinlab.com</a></p>` : ''}
         <div class="acts">
           <a href="/" class="btn btn-em">Volver al inicio</a>
         </div>`;
@@ -105,9 +109,10 @@
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </div>
         <h1>Pago no completado</h1>
-        <p class="sub">El pago no fue procesado. Tu hora sigue disponible — puedes intentarlo de nuevo.</p>
+        <p class="sub">El pago no fue procesado. Tu hora sigue disponible — puedes intentarlo de nuevo sin perder el horario seleccionado.</p>
         <div class="acts">
-          <a href="/" class="btn btn-em">Intentar de nuevo</a>
+          <a href="javascript:history.back()" class="btn btn-ghost">← Volver y reintentar</a>
+          <a href="/" class="btn btn-em">Ir al inicio</a>
         </div>`;
     }
 

@@ -27,6 +27,21 @@ const CONTENT_FILE = path.join(DATA_DIR, 'content.json');
 const resend   = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 
+/* ── Sesiones admin (token en memoria, expiran en 24h) ───────────────────── */
+const sessions = new Map(); // token → expiry timestamp
+setInterval(() => {
+  const now = Date.now();
+  sessions.forEach((exp, tok) => { if (exp < now) sessions.delete(tok); });
+}, 3_600_000);
+
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
+const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function parseCookie(req, name) {
+  const raw = req.headers.cookie?.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='));
+  return raw ? decodeURIComponent(raw.slice(name.length + 1)) : null;
+}
+
 /* ── Config y content ─────────────────────────────────────────────────────── */
 const DEFAULT_CONFIG = {
   services: [
@@ -99,10 +114,15 @@ function writeBlocked(data) { fs.writeFileSync(BL_FILE, JSON.stringify(data, nul
 const IMAGES_DIR = path.join(__dirname, 'images');
 if (!fs.existsSync(IMAGES_DIR)) fs.mkdirSync(IMAGES_DIR, { recursive: true });
 
+const ALLOWED_IMAGE_SLOTS = new Set(['barbara','consulta-express','asesoria-personalizada','revision-productos']);
 const imageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, IMAGES_DIR),
   filename: (req, file, cb) => {
-    const name = req.body.slot || path.basename(file.originalname, path.extname(file.originalname));
+    const slot = req.body.slot;
+    const name = ALLOWED_IMAGE_SLOTS.has(slot)
+      ? slot
+      : path.basename(file.originalname, path.extname(file.originalname))
+          .replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50);
     cb(null, name + path.extname(file.originalname).toLowerCase());
   },
 });
@@ -137,16 +157,38 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 /* ── Middlewares ──────────────────────────────────────────────────────────── */
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'"],
+      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc:     ["'self'", 'data:', 'https:', 'blob:'],
+      connectSrc: ["'self'"],
+      frameSrc:   ['https://www.mercadopago.cl', 'https://www.mercadopago.com', 'https://www.mercadolibre.com'],
+    },
+  },
+}));
 const ALLOWED = ['https://bosskinlab.com','https://www.bosskinlab.com','http://localhost:3004','http://localhost:3000'];
 app.use(cors({ origin: (origin, cb) => cb(null, !origin || ALLOWED.includes(origin)), methods:['GET','POST','PATCH','PUT','DELETE','OPTIONS'], allowedHeaders:['Content-Type','Authorization'] }));
 app.use(express.json({ limit:'2mb' }));
 app.use(express.static(path.join(__dirname)));
 
 /* ── Rate limiting ────────────────────────────────────────────────────────── */
-const bookingLimiter = rateLimit({ windowMs:60_000, max:5,  message:{ error:'Demasiadas solicitudes, intenta en 1 minuto.' } });
-const adminLimiter   = rateLimit({ windowMs:60_000, max:60, message:{ error:'Demasiadas solicitudes.' } });
-const slotLimiter    = rateLimit({ windowMs:60_000, max:30, message:{ error:'Demasiadas solicitudes.' } });
+const bookingLimiter  = rateLimit({ windowMs:60_000, max:5,   message:{ error:'Demasiadas solicitudes, intenta en 1 minuto.' } });
+const adminLimiter    = rateLimit({ windowMs:60_000, max:60,  message:{ error:'Demasiadas solicitudes.' } });
+const slotLimiter     = rateLimit({ windowMs:60_000, max:30,  message:{ error:'Demasiadas solicitudes.' } });
+const calendarLimiter = rateLimit({ windowMs:60_000, max:20,  message:'Demasiadas solicitudes.' });
+
+/* ── Validar Origin en métodos mutantes ───────────────────────────────────── */
+app.use((req, res, next) => {
+  if (['POST','PUT','PATCH','DELETE'].includes(req.method)) {
+    const origin = req.headers.origin;
+    if (origin && !ALLOWED.includes(origin)) return res.status(403).json({ error:'No autorizado' });
+  }
+  next();
+});
 
 /* ── Duración de servicio: chequeo de solapamiento ───────────────────────── */
 function toMinutes(timeStr) {
@@ -181,9 +223,46 @@ function wouldConflictForward(slotTime, requestedDur, dayBookings) {
 
 /* ── Admin auth ───────────────────────────────────────────────────────────── */
 function adminAuth(req, res, next) {
-  if (req.headers['authorization'] === `Bearer ${process.env.ADMIN_PASSWORD}`) return next();
-  res.status(401).json({ error:'No autorizado' });
+  // Acepta cookie httpOnly (navegador) o Bearer header (herramientas CLI)
+  const token = parseCookie(req, 'bosskin_admin') || (req.headers['authorization'] || '').replace('Bearer ', '');
+  const expiry = sessions.get(token);
+  if (!token || !expiry || expiry < Date.now()) {
+    sessions.delete(token);
+    return res.status(401).json({ error: 'Sesión expirada' });
+  }
+  sessions.set(token, Date.now() + 24 * 3_600_000);
+  next();
 }
+
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure:   process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge:   24 * 3_600_000,
+  path:     '/',
+};
+
+app.post('/api/admin/login', adminLimiter, (req, res) => {
+  const { password } = req.body;
+  const stored = process.env.ADMIN_PASSWORD || '';
+  // Comparación segura contra timing attacks
+  const pwBuf = Buffer.from(String(password || '').padEnd(stored.length, '\0'));
+  const stBuf = Buffer.from(stored.padEnd(String(password || '').length, '\0'));
+  const same  = password && stored && password.length === stored.length && crypto.timingSafeEqual(pwBuf, stBuf);
+  if (!same) return res.status(401).json({ error: 'Contraseña incorrecta' });
+
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, Date.now() + 24 * 3_600_000);
+  res.cookie('bosskin_admin', token, COOKIE_OPTS);
+  res.json({ ok: true }); // no exponer el token al JS
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  const token = parseCookie(req, 'bosskin_admin') || (req.headers['authorization'] || '').replace('Bearer ', '');
+  sessions.delete(token);
+  res.clearCookie('bosskin_admin', { path: '/' });
+  res.json({ ok: true });
+});
 
 /* ── Emails ───────────────────────────────────────────────────────────────── */
 async function sendConfirmationEmail(booking) {
@@ -201,13 +280,14 @@ async function sendConfirmationEmail(booking) {
           <tr><td style="padding:10px 0;color:#6b7280;border-bottom:1px solid #1f2d24">Fecha</td><td style="padding:10px 0;border-bottom:1px solid #1f2d24;text-align:right">${dateStr}</td></tr>
           <tr><td style="padding:10px 0;color:#6b7280">Hora</td><td style="padding:10px 0;text-align:right">${booking.time} hrs</td></tr>
         </table>
-        <p style="margin-top:24px;color:#9ca3af;font-size:.85rem">Te enviaremos el link de videollamada antes de tu sesión. Si necesitas cancelar o reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>
+        <p style="margin-top:24px;color:#9ca3af;font-size:.85rem">Te enviaremos el link de videollamada antes de tu sesión.</p>
+        ${booking.cancel_token ? `<p style="margin-top:12px;color:#9ca3af;font-size:.82rem">Para cancelar tu reserva (con al menos 24h de anticipación) <a href="${BASE_URL}/api/bookings/${booking.id}/cancel?token=${booking.cancel_token}" style="color:#D4EDE3">haz clic aquí</a>. Si necesitas reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>` : `<p style="margin-top:12px;color:#9ca3af;font-size:.82rem">Si necesitas cancelar o reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>`}
       </div>`
     });
     await resend.emails.send({
       from:'BOSSKIN <reservas@bosskinlab.com>', to: process.env.NOTIFICATION_EMAIL || 'reservas@bosskinlab.com',
-      subject:`Nueva reserva confirmada — ${booking.name}`,
-      html:`<p>Nueva reserva confirmada:</p><ul><li><b>Nombre:</b> ${booking.name}</li><li><b>Email:</b> ${booking.email}</li><li><b>Teléfono:</b> ${booking.phone}</li><li><b>Servicio:</b> ${booking.service}</li><li><b>Fecha:</b> ${dateStr}</li><li><b>Hora:</b> ${booking.time}</li></ul>`
+      subject:`Nueva reserva confirmada — ${escHtml(booking.name)}`,
+      html:`<p>Nueva reserva confirmada:</p><ul><li><b>Nombre:</b> ${escHtml(booking.name)}</li><li><b>Email:</b> ${escHtml(booking.email)}</li><li><b>Teléfono:</b> ${escHtml(booking.phone)}</li><li><b>Servicio:</b> ${escHtml(booking.service)}</li><li><b>Fecha:</b> ${escHtml(dateStr)}</li><li><b>Hora:</b> ${escHtml(booking.time)}</li></ul>`
     });
   } catch(e) { console.error('Email error:', e.message); }
 }
@@ -286,8 +366,9 @@ app.post('/api/bookings', bookingLimiter, async (req, res) => {
       const clash = getBookings().find(b => b.date === date && b.time === time && b.status !== 'cancelado');
       if (clash) return { conflict: true };
 
-      const id        = crypto.randomBytes(12).toString('hex');
-      const createdAt = new Date().toISOString();
+      const id          = crypto.randomBytes(12).toString('hex');
+      const cancelToken = crypto.randomBytes(16).toString('hex');
+      const createdAt   = new Date().toISOString();
       const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
 
       let paymentUrl = null, mpPrefId = null;
@@ -310,7 +391,7 @@ app.post('/api/bookings', bookingLimiter, async (req, res) => {
       } catch(mpErr) { console.error('MP error:', mpErr.message); }
 
       const db = readDB();
-      db.bookings.push({ id, name:name.trim(), email:email.trim(), phone:phone.trim(), date, time, service:svc.name, price:svc.price, status:'pendiente', mp_preference_id:mpPrefId, created_at:createdAt });
+      db.bookings.push({ id, name:name.trim(), email:email.trim(), phone:phone.trim(), date, time, service:svc.name, price:svc.price, status:'pendiente', mp_preference_id:mpPrefId, cancel_token:cancelToken, created_at:createdAt });
       writeDB(db);
       return { id, paymentUrl };
     });
@@ -323,6 +404,27 @@ app.post('/api/bookings', bookingLimiter, async (req, res) => {
 /* ── Webhook Mercado Pago ─────────────────────────────────────────────────── */
 app.post('/api/webhook', (req, res) => {
   res.sendStatus(200);
+
+  // Verificar firma si se configuró MP_WEBHOOK_SECRET en el dashboard de MP
+  const mpSecret = process.env.MP_WEBHOOK_SECRET;
+  if (mpSecret) {
+    const xSig   = req.headers['x-signature'] || '';
+    const xReqId = req.headers['x-request-id'] || '';
+    const ts     = xSig.match(/ts=([^,]+)/)?.[1];
+    const v1     = xSig.match(/v1=([^,]+)/)?.[1];
+    const dataId = req.body?.data?.id;
+    if (!ts || !v1 || !dataId) { console.warn('⚠ Webhook sin firma válida'); return; }
+    const manifest = `id:${dataId};request-id:${xReqId};ts:${ts};`;
+    const expected = crypto.createHmac('sha256', mpSecret).update(manifest).digest('hex');
+    try {
+      const eBuf = Buffer.from(expected, 'hex');
+      const vBuf = Buffer.from(v1, 'hex');
+      if (eBuf.length !== vBuf.length || !crypto.timingSafeEqual(eBuf, vBuf)) {
+        console.warn('⚠ Webhook firma inválida — ignorado'); return;
+      }
+    } catch { console.warn('⚠ Webhook firma malformada'); return; }
+  }
+
   const { type, data } = req.body;
   if (type !== 'payment' || !data?.id) return;
   (async () => {
@@ -342,17 +444,25 @@ app.post('/api/webhook', (req, res) => {
 });
 
 /* ── Reserva por ID ───────────────────────────────────────────────────────── */
-app.get('/api/bookings/:id', (req, res) => {
+app.get('/api/bookings/:id', slotLimiter, (req, res) => {
   const booking = getBookings().find(b => b.id === req.params.id);
   if (!booking) return res.status(404).json({ error:'Reserva no encontrada' });
-  const { mp_preference_id, mp_payment_id, ...safe } = booking;
+  const { mp_preference_id, mp_payment_id, cancel_token, ...safe } = booking;
   res.json(safe);
 });
 
 /* ── Cancelar reserva ─────────────────────────────────────────────────────── */
-app.delete('/api/bookings/:id/cancel', (req, res) => {
+app.delete('/api/bookings/:id/cancel', slotLimiter, (req, res) => {
+  const { token } = req.query;
   const booking = getBookings().find(b => b.id === req.params.id);
   if (!booking) return res.status(404).json({ error:'Reserva no encontrada' });
+
+  // Aceptar cancel_token del cliente O sesión admin activa
+  const authToken = (req.headers['authorization'] || '').replace('Bearer ', '');
+  const isAdmin   = authToken && (sessions.get(authToken) || 0) > Date.now();
+  const validToken = booking.cancel_token && token === booking.cancel_token;
+  if (!isAdmin && !validToken) return res.status(403).json({ error:'No autorizado' });
+
   const sessionDate = new Date(booking.date + 'T' + booking.time + ':00');
   const hoursLeft   = (sessionDate - new Date()) / 3_600_000;
   if (hoursLeft < 24) return res.status(400).json({ error:'No se puede cancelar con menos de 24 horas de anticipación.' });
@@ -374,18 +484,20 @@ app.get('/api/admin/stats', adminLimiter, adminAuth, (req, res) => {
     pending:   all.filter(b => b.status === 'pendiente').length,
     cancelled: all.filter(b => b.status === 'cancelado').length,
     unique:    new Set(all.map(b => b.email.toLowerCase())).size,
-    today:     all.filter(b => b.date === today).length,
+    today:     all.filter(b => b.date === today && b.status === 'confirmado').length,
     revenue,
   });
 });
 
 /* ── Listar reservas ──────────────────────────────────────────────────────── */
+const VALID_STATUSES = new Set(['confirmado','pendiente','cancelado']);
 app.get('/api/admin/bookings', adminLimiter, adminAuth, (req, res) => {
   const { date, q, status } = req.query;
   let rows = getBookings();
-  if (date)   rows = rows.filter(b => b.date === date);
-  if (status) rows = rows.filter(b => b.status === status);
-  if (q)      rows = rows.filter(b => b.name.toLowerCase().includes(q.toLowerCase()) || b.email.toLowerCase().includes(q.toLowerCase()));
+  if (date && DATE_RE.test(date))               rows = rows.filter(b => b.date === date);
+  if (status && VALID_STATUSES.has(status))     rows = rows.filter(b => b.status === status);
+  if (q && typeof q === 'string' && q.length <= 100)
+    rows = rows.filter(b => b.name.toLowerCase().includes(q.toLowerCase()) || b.email.toLowerCase().includes(q.toLowerCase()));
   rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   res.json(rows);
 });
@@ -402,6 +514,16 @@ app.patch('/api/admin/bookings/:id/confirm', adminLimiter, adminAuth, async (req
 app.delete('/api/admin/bookings/:id', adminLimiter, adminAuth, (req, res) => {
   deleteBooking(req.params.id);
   res.json({ ok:true });
+});
+
+/* ── Reenviar email de confirmación ──────────────────────────────────────── */
+app.post('/api/admin/bookings/:id/resend-email', adminLimiter, adminAuth, async (req, res) => {
+  const booking = getBookings().find(b => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error:'Reserva no encontrada' });
+  if (booking.status !== 'confirmado') return res.status(400).json({ error:'Solo se puede reenviar en reservas confirmadas' });
+  if (!resend) return res.status(503).json({ error:'Servicio de email no configurado' });
+  try { await sendConfirmationEmail(booking); res.json({ ok:true }); }
+  catch(e) { res.status(500).json({ error:'Error al enviar email: ' + e.message }); }
 });
 
 /* ── Fechas bloqueadas ────────────────────────────────────────────────────── */
@@ -504,7 +626,11 @@ app.get('/api/admin/export', adminLimiter, adminAuth, (req, res) => {
 });
 
 /* ── Calendario ICS ───────────────────────────────────────────────────────── */
-function calToken() { return crypto.createHash('sha256').update((process.env.ADMIN_PASSWORD||'')+'ics').digest('hex').slice(0,20); }
+function calToken() {
+  // Usa CALENDAR_SECRET si está definida; si no, deriva de ADMIN_PASSWORD con sal diferente
+  const secret = process.env.CALENDAR_SECRET || (process.env.ADMIN_PASSWORD || '') + '_cal_bosskin_2025';
+  return crypto.createHmac('sha256', secret).update('bosskin-calendar-v2').digest('hex').slice(0, 32);
+}
 function toICSDate(date, time, offsetMins=0) {
   const [y,m,d] = date.split('-').map(Number);
   const [h,min] = time.split(':').map(Number);
@@ -513,7 +639,7 @@ function toICSDate(date, time, offsetMins=0) {
 }
 function escapeICS(str) { return String(str).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
 
-app.get('/api/calendar.ics', (req, res) => {
+app.get('/api/calendar.ics', calendarLimiter, (req, res) => {
   if (req.query.token !== calToken()) return res.status(401).send('No autorizado');
   const cfg      = readConfig();
   const durMap   = Object.fromEntries(cfg.services.map(s => [s.name, s.duration]));

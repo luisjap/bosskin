@@ -429,8 +429,9 @@
   <main>
     <!-- Desktop tabs -->
     <div class="d-tabs" id="d-tabs">
-      <button class="d-tab active" id="dtab-reservas" onclick="switchDesktopTab('reservas')">📋 Reservas</button>
-      <button class="d-tab" id="dtab-config"   onclick="switchDesktopTab('config')">⚙️ Servicios &amp; Horarios</button>
+      <button class="d-tab active" id="dtab-reservas"  onclick="switchDesktopTab('reservas')">📋 Reservas</button>
+      <button class="d-tab" id="dtab-agenda"    onclick="switchDesktopTab('agenda')">📅 Agenda</button>
+      <button class="d-tab" id="dtab-config"    onclick="switchDesktopTab('config')">⚙️ Servicios &amp; Horarios</button>
       <button class="d-tab" id="dtab-contenido" onclick="switchDesktopTab('contenido')">✏️ Contenido &amp; Imágenes</button>
     </div>
 
@@ -514,8 +515,11 @@
           </div>
         </div>
       </div>
-      <div class="cfg-section-title" style="margin-top:32px">Agenda por día</div>
-      <p style="font-size:.82rem;color:var(--g-mid);margin-bottom:16px">Haz clic en un día para ver y gestionar sus horarios. Verde = disponible · Ámbar = reservado · Rojo = bloqueado.</p>
+    </div><!-- /panel config -->
+
+    <!-- Panel: Agenda -->
+    <div class="d-panel" id="dtab-panel-agenda">
+      <p style="font-size:.82rem;color:var(--g-mid);margin-bottom:20px">Haz clic en un día para ver y gestionar sus horarios. Verde = disponible · Ámbar = reservado · Rojo = bloqueado.</p>
       <div class="cal-wrap">
         <div class="cal-box">
           <div class="cal-nav">
@@ -531,7 +535,7 @@
           </div>
         </div>
       </div>
-    </div><!-- /panel config -->
+    </div><!-- /panel agenda -->
 
     <!-- Panel: Contenido -->
     <div class="d-panel" id="dtab-panel-contenido">
@@ -653,6 +657,7 @@
     <div class="m-filter-chip" data-status="hoy" onclick="setMobileFilter(this,'hoy')">Hoy</div>
     <div class="m-filter-chip" data-status="confirmado" onclick="setMobileFilter(this,'confirmado')">Confirmadas</div>
     <div class="m-filter-chip" data-status="pendiente" onclick="setMobileFilter(this,'pendiente')">Pendientes</div>
+    <div class="m-filter-chip" data-status="cancelado" onclick="setMobileFilter(this,'cancelado')">Canceladas</div>
   </div>
   <div class="m-cards" id="m-cards"></div>
 </div>
@@ -737,6 +742,18 @@
   </button>
 </nav>
 
+<!-- ── Confirm pago manual ────────────────────────────────────────────── -->
+<div class="confirm-overlay" id="confirm-pay-overlay">
+  <div class="confirm-box" style="border-color:rgba(26,107,74,.35)">
+    <div class="confirm-t">Confirmar pago manual</div>
+    <div class="confirm-s" id="confirm-pay-msg"></div>
+    <div class="confirm-acts">
+      <button class="btn-cancel" onclick="closePayConfirm()">Cancelar</button>
+      <button class="btn-confirm-del" style="background:var(--emerald)" id="btn-do-confirm-pay" onclick="doConfirmPayment()">Confirmar pago</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Confirm delete ──────────────────────────────────────────────────── -->
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
@@ -750,31 +767,49 @@
 </div>
 
 <script>
-  const SESS = 'boosskin_admin_pw';
   let pendingDeleteId = null;
 
-  function authHeader() { return { 'Authorization': `Bearer ${sessionStorage.getItem(SESS)}` }; }
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  /* La cookie httpOnly la envía el navegador automáticamente — no se necesita header manual.
+     apiFetch solo maneja el redirect a login en caso de 401. */
+  async function apiFetch(url, opts = {}) {
+    const res = await fetch(url, opts);
+    if (res.status === 401) { location.reload(); throw new Error('Sesión expirada'); }
+    return res;
+  }
 
   /* ── Auth ── */
   async function doLogin() {
-    const pw  = document.getElementById('pw-input').value;
-    const res = await fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${pw}` } });
-    if (res.ok) {
-      sessionStorage.setItem(SESS, pw);
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').classList.add('show');
-      init();
-    } else {
-      document.getElementById('login-err').classList.add('show');
-      document.getElementById('pw-input').value = '';
-      document.getElementById('pw-input').focus();
+    const pw    = document.getElementById('pw-input').value;
+    const errEl = document.getElementById('login-err');
+    errEl.classList.remove('show');
+    try {
+      const res  = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pw }) });
+      const data = await res.json();
+      if (res.ok) {
+        // El servidor ya puso la cookie httpOnly — solo mostramos el panel
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').classList.add('show');
+        init();
+      } else {
+        errEl.textContent = data.error || 'Contraseña incorrecta';
+        errEl.classList.add('show');
+        document.getElementById('pw-input').value = '';
+        document.getElementById('pw-input').focus();
+      }
+    } catch {
+      errEl.textContent = 'Error de conexión';
+      errEl.classList.add('show');
     }
   }
-  function doLogout() { sessionStorage.removeItem(SESS); location.reload(); }
+  function doLogout() {
+    fetch('/api/admin/logout', { method:'POST' }).finally(() => location.reload());
+  }
 
   /* ── Init ── */
   function init() {
+    _appActive = true;
     document.getElementById('tb-date').textContent = new Date().toLocaleDateString('es-CL', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     renderStats();
     renderTable();
@@ -785,7 +820,7 @@
 
   /* ── Stats ── */
   async function renderStats() {
-    const res  = await fetch('/api/admin/stats', { headers: authHeader() });
+    const res  = await apiFetch('/api/admin/stats', {});
     const data = await res.json();
     document.getElementById('stats-row').innerHTML = `
       <div class="stat-card accent">
@@ -821,7 +856,7 @@
     const tbody = document.getElementById('table-body');
     tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Cargando…</td></tr>';
 
-    const res  = await fetch(`/api/admin/bookings?${params}`, { headers: authHeader() });
+    const res  = await apiFetch(`/api/admin/bookings?${params}`, {});
     const rows = await res.json();
 
     if (!rows.length) {
@@ -833,7 +868,7 @@
       const ag  = new Date(b.created_at).toLocaleDateString('es-CL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
       const ok  = b.status === 'confirmado';
       const badge      = ok ? `<span class="badge-conf">✓ Confirmado</span>` : `<span class="badge-pend">⏳ Pendiente</span>`;
-      const confirmBtn = ok ? '' : `<button class="btn-confirm" onclick="confirmPayment('${b.id}')">Confirmar pago</button>`;
+      const confirmBtn  = ok ? `<button class="btn-confirm" onclick="resendEmail('${b.id}')" title="Reenviar email de confirmación">Reenviar email</button>` : `<button class="btn-confirm" onclick="confirmPayment('${b.id}','${esc(b.name)}','${b.date}','${b.time}')">Confirmar pago</button>`;
       return `<tr>
         <td class="td-name">${esc(b.name)}</td>
         <td><a href="mailto:${esc(b.email)}" style="color:var(--g-light);text-decoration:underline;text-underline-offset:3px">${esc(b.email)}</a></td>
@@ -849,10 +884,30 @@
   }
 
   /* ── Confirmar pago manual ── */
-  async function confirmPayment(id) {
-    await fetch(`/api/admin/bookings/${id}/confirm`, { method: 'PATCH', headers: authHeader() });
-    renderStats();
-    renderTable();
+  let _pendingConfirmId = null;
+  function confirmPayment(id, name, date, time) {
+    _pendingConfirmId = id;
+    const d = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+    document.getElementById('confirm-pay-msg').innerHTML = `¿Confirmar el pago de <strong>${esc(name)}</strong> para el ${d} a las ${time}?<br><br>Se enviará el email de confirmación a la clienta.`;
+    document.getElementById('confirm-pay-overlay').classList.add('open');
+  }
+  function closePayConfirm() { document.getElementById('confirm-pay-overlay').classList.remove('open'); _pendingConfirmId = null; }
+  async function doConfirmPayment() {
+    if (!_pendingConfirmId) return;
+    const btn = document.getElementById('btn-do-confirm-pay');
+    btn.disabled = true; btn.textContent = 'Confirmando…';
+    await apiFetch(`/api/admin/bookings/${_pendingConfirmId}/confirm`, { method: 'PATCH' });
+    closePayConfirm();
+    renderStats(); renderTable();
+    btn.disabled = false; btn.textContent = 'Confirmar pago';
+  }
+
+  /* ── Reenviar email de confirmación ── */
+  async function resendEmail(id) {
+    const res  = await apiFetch(`/api/admin/bookings/${id}/resend-email`, { method:'POST' });
+    const data = await res.json();
+    if (res.ok) showDToast('✓ Email de confirmación reenviado');
+    else        showDToast('✗ ' + (data.error || 'Error al reenviar'), false);
   }
 
   /* ── Eliminar ── */
@@ -865,7 +920,7 @@
   function closeConfirm() { document.getElementById('confirm-overlay').classList.remove('open'); pendingDeleteId = null; }
   async function confirmDelete() {
     if (!pendingDeleteId) return;
-    await fetch(`/api/admin/bookings/${pendingDeleteId}`, { method: 'DELETE', headers: authHeader() });
+    await apiFetch(`/api/admin/bookings/${pendingDeleteId}`, { method: 'DELETE' });
     closeConfirm();
     renderStats();
     renderTable();
@@ -880,7 +935,7 @@
 
   /* ── Exportar CSV ── */
   async function exportCSV() {
-    const res  = await fetch('/api/admin/bookings', { headers: authHeader() });
+    const res  = await apiFetch('/api/admin/bookings', {});
     const rows = await res.json();
     rows.sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
     const header = ['Nombre','Email','Teléfono','Servicio','Fecha','Hora','Estado','Agendado'];
@@ -926,7 +981,7 @@
   }
 
   async function loadAllBookings() {
-    const res = await fetch('/api/admin/bookings', { headers: authHeader() });
+    const res = await apiFetch('/api/admin/bookings', {});
     allBookings = await res.json();
     allBookings.sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
   }
@@ -942,7 +997,9 @@
     const dateLabel = isToday ? `<b style="color:var(--emerald-lt)">Hoy</b> · ${b.time} hrs` : `${d} · ${b.time} hrs`;
     const phone = b.phone.replace(/\s/g,'');
     const wspUrl = `https://wa.me/${phone.startsWith('+') ? phone.slice(1) : '56' + phone.replace(/^0/,'')}`;
-    const confirmBtn = ok ? '' : `<button class="m-act-btn confirm" onclick="mConfirm('${b.id}',this)">¿Ya pagó? Confirmar</button>`;
+    const confirmBtn = ok
+      ? `<button class="m-act-btn confirm" style="color:var(--emerald-lt)" onclick="mResend('${b.id}',this)">Reenviar email</button>`
+      : `<button class="m-act-btn confirm" onclick="mConfirm('${b.id}',this)">¿Ya pagó? Confirmar</button>`;
     return `<div class="m-card${ok?'':' pending-card'}" style="animation-delay:${i*0.04}s">
       <div class="m-card-head">
         <div>
@@ -1033,9 +1090,10 @@
     const today = new Date().toISOString().split('T')[0];
     let rows    = [...allBookings];
 
-    if (mobileFilter === 'hoy')        rows = rows.filter(b => b.date === today);
+    if (mobileFilter === 'hoy')             rows = rows.filter(b => b.date === today);
     else if (mobileFilter === 'confirmado') rows = rows.filter(b => b.status === 'confirmado');
     else if (mobileFilter === 'pendiente')  rows = rows.filter(b => b.status === 'pendiente');
+    else if (mobileFilter === 'cancelado')  rows = rows.filter(b => b.status === 'cancelado');
 
     if (q) rows = rows.filter(b => b.name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q) || b.phone.includes(q));
 
@@ -1055,9 +1113,17 @@
 
   async function mConfirm(id, btn) {
     if (btn) { btn.textContent = 'Confirmando…'; btn.disabled = true; }
-    await fetch(`/api/admin/bookings/${id}/confirm`, { method:'PATCH', headers: authHeader() });
+    await apiFetch(`/api/admin/bookings/${id}/confirm`, { method:'PATCH' });
     await renderMobileHome();
     renderStats();
+  }
+
+  async function mResend(id, btn) {
+    if (btn) { btn.textContent = 'Enviando…'; btn.disabled = true; }
+    const res = await apiFetch(`/api/admin/bookings/${id}/resend-email`, { method:'POST' });
+    if (res.ok) showMToast('✓ Email reenviado');
+    else        showMToast('✗ Error al reenviar email');
+    if (btn) { btn.textContent = 'Reenviar email'; btn.disabled = false; }
   }
 
   function mDelete(id, name) {
@@ -1067,7 +1133,7 @@
   }
 
   async function renderMobileStats() {
-    const res  = await fetch('/api/admin/stats', { headers: authHeader() });
+    const res  = await apiFetch('/api/admin/stats', {});
     const data = await res.json();
     document.getElementById('m-stats-detail').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
@@ -1080,7 +1146,7 @@
   }
 
   async function renderMobileBlocked() {
-    const res   = await fetch('/api/admin/blocked', { headers: authHeader() });
+    const res   = await apiFetch('/api/admin/blocked', {});
     const dates = await res.json();
     const cont  = document.getElementById('m-blocked-chips');
     if (!dates.length) { cont.innerHTML = '<span style="font-size:.8rem;color:var(--g-mid)">Sin fechas bloqueadas</span>'; return; }
@@ -1093,18 +1159,18 @@
   async function mBlockDate() {
     const d = document.getElementById('m-block-date').value;
     if (!d) return;
-    await fetch('/api/admin/blocked', { method:'POST', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify({date:d}) });
+    await apiFetch('/api/admin/blocked', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date:d}) });
     document.getElementById('m-block-date').value = '';
     renderMobileBlocked(); renderBlocked();
   }
 
   async function mUnblock(d) {
-    await fetch(`/api/admin/blocked/${d}`, { method:'DELETE', headers: authHeader() });
+    await apiFetch(`/api/admin/blocked/${d}`, { method:'DELETE' });
     renderMobileBlocked(); renderBlocked();
   }
 
   async function mCopyCalendar() {
-    const res  = await fetch('/api/admin/calendar-url', { headers: authHeader() });
+    const res  = await apiFetch('/api/admin/calendar-url', {});
     const data = await res.json();
     await navigator.clipboard.writeText(data.url);
     showMToast('✓ Link copiado — pégalo en tu calendario');
@@ -1119,7 +1185,7 @@
 
   /* ── Calendario ICS ── */
   async function copyCalendarUrl() {
-    const res  = await fetch('/api/admin/calendar-url', { headers: authHeader() });
+    const res  = await apiFetch('/api/admin/calendar-url', {});
     const data = await res.json();
     await navigator.clipboard.writeText(data.url);
     const btn = document.getElementById('btn-cal');
@@ -1129,7 +1195,7 @@
 
   /* ── Bloqueo de fechas ── */
   async function renderBlocked() {
-    const res  = await fetch('/api/admin/blocked', { headers: authHeader() });
+    const res  = await apiFetch('/api/admin/blocked', {});
     const dates = await res.json();
     const list  = document.getElementById('blocked-list');
     if (!dates.length) { list.innerHTML = '<span class="blocked-empty">Sin fechas bloqueadas</span>'; return; }
@@ -1141,42 +1207,44 @@
   async function blockDate() {
     const d = document.getElementById('block-date-input').value;
     if (!d) return;
-    await fetch('/api/admin/blocked', { method:'POST', headers: { ...authHeader(), 'Content-Type':'application/json' }, body: JSON.stringify({ date: d }) });
+    await apiFetch('/api/admin/blocked', { method:'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ date: d }) });
     document.getElementById('block-date-input').value = '';
     renderBlocked();
   }
   async function unblockDate(d) {
-    await fetch(`/api/admin/blocked/${d}`, { method:'DELETE', headers: authHeader() });
+    await apiFetch(`/api/admin/blocked/${d}`, { method:'DELETE' });
     renderBlocked();
   }
 
-  /* ── Auto-refresh cada 30s ── */
+  /* ── Auto-refresh cada 30s (la cookie se envía automáticamente) ── */
+  let _appActive = false;
   setInterval(() => {
-    if (!sessionStorage.getItem(SESS)) return;
+    if (!_appActive) return;
     renderStats();
     if (isMobile()) renderMobileHome(); else renderTable();
   }, 30_000);
 
-  /* ── Boot ── */
-  if (sessionStorage.getItem(SESS)) {
+  /* ── Boot: intenta cargar la app si hay cookie de sesión activa ── */
+  fetch('/api/admin/stats').then(r => {
+    if (!r.ok) return; // 401 → queda en login
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('show');
+    _appActive = true;
     init();
-  }
+  }).catch(() => { /* sin conexión → queda en login */ });
 
   /* ══════════════════════════════════════════════════════════════════════════
      DESKTOP TABS
   ══════════════════════════════════════════════════════════════════════════ */
   function switchDesktopTab(tab) {
-    ['reservas','config','contenido'].forEach(t => {
+    ['reservas','agenda','config','contenido'].forEach(t => {
       document.getElementById(`dtab-${t}`)?.classList.toggle('active', t === tab);
       document.getElementById(`dtab-panel-${t}`)?.classList.toggle('active', t === tab);
     });
-    if (tab === 'config') {
-      loadConfigEditor().then(() => {
-        if (!_calYear) calInit(); else calRender();
-      });
+    if (tab === 'agenda') {
+      loadConfigEditor().then(() => { if (!_calYear) calInit(); else calRender(); });
     }
+    if (tab === 'config') loadConfigEditor();
     if (tab === 'contenido') loadContentEditor();
   }
 
@@ -1196,7 +1264,7 @@
 
   async function loadConfigEditor() {
     if (_cfg) { renderConfigEditor(); return; }
-    const res = await fetch('/api/admin/config', { headers: authHeader() });
+    const res = await apiFetch('/api/admin/config', {});
     _cfg = await res.json();
     renderConfigEditor();
   }
@@ -1304,7 +1372,7 @@
     const btn = document.getElementById('btn-save-config');
     btn.disabled = true; btn.textContent = 'Guardando…';
     try {
-      const res = await fetch('/api/admin/config', { method:'PUT', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify(_cfg) });
+      const res = await apiFetch('/api/admin/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_cfg) });
       if (res.ok) showDToast('✓ Configuración guardada correctamente');
       else        showDToast('✗ Error al guardar', false);
     } catch { showDToast('✗ Error de conexión', false); }
@@ -1318,7 +1386,7 @@
 
   async function loadContentEditor() {
     if (_cnt) { renderContentEditor(); return; }
-    const res = await fetch('/api/admin/content', { headers: authHeader() });
+    const res = await apiFetch('/api/admin/content', {});
     _cnt = await res.json();
     renderContentEditor();
   }
@@ -1328,10 +1396,10 @@
   function renderContentEditor() {
     const c = _cnt;
     // Contacto
-    setVal('cnt-whatsapp',      c.contact?.whatsapp   || '');
-    setVal('cnt-email',         c.contact?.email      || '');
-    setVal('cnt-instagram',     c.contact?.instagram  || '');
-    setVal('cnt-tiktok',        c.contact?.tiktok     || '');
+    setVal('cnt-whatsapp',      c.contact?.whatsapp    || '');
+    setVal('cnt-email',         c.contact?.email       || '');
+    setVal('cnt-instagram',     c.contact?.instagram   || '');
+    setVal('cnt-tiktok',        c.contact?.tiktok      || '');
     // Hero
     setVal('cnt-hero-badge',    c.hero?.badge    || '');
     setVal('cnt-hero-title',    c.hero?.title    || '');
@@ -1372,10 +1440,10 @@
   function collectContent() {
     return {
       contact: {
-        whatsapp:  document.getElementById('cnt-whatsapp')?.value  || '',
-        email:     document.getElementById('cnt-email')?.value     || '',
-        instagram: document.getElementById('cnt-instagram')?.value || '',
-        tiktok:    document.getElementById('cnt-tiktok')?.value    || '',
+        whatsapp:   document.getElementById('cnt-whatsapp')?.value  || '',
+        email:      document.getElementById('cnt-email')?.value     || '',
+        instagram:  document.getElementById('cnt-instagram')?.value || '',
+        tiktok:     document.getElementById('cnt-tiktok')?.value    || '',
       },
       hero: {
         ..._cnt.hero,
@@ -1407,7 +1475,7 @@
     btn.disabled = true; btn.textContent = 'Guardando…';
     const data = collectContent();
     try {
-      const res = await fetch('/api/admin/content', { method:'PUT', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify(data) });
+      const res = await apiFetch('/api/admin/content', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
       if (res.ok) { _cnt = data; showDToast('✓ Contenido guardado — los cambios ya son visibles en el sitio'); }
       else        showDToast('✗ Error al guardar', false);
     } catch { showDToast('✗ Error de conexión', false); }
@@ -1428,10 +1496,18 @@
   }
 
   async function calLoad() {
-    // Cargar bookings del mes para los badges
-    const res = await fetch(`/api/admin/month-bookings/${_calYear}/${_calMonth}`, { headers: authHeader() });
+    // Indicador visual mientras carga el nuevo mes
+    const lbl  = document.getElementById('cal-month-lbl');
+    const grid = document.getElementById('cal-grid');
+    if (lbl)  lbl.style.opacity  = '0.35';
+    if (grid) grid.style.opacity = '0.35';
+
+    const res = await apiFetch(`/api/admin/month-bookings/${_calYear}/${_calMonth}`, {});
     _calBookings = await res.json();
     calRender();
+
+    if (lbl)  lbl.style.opacity  = '';
+    if (grid) grid.style.opacity = '';
     if (_calSelected) loadDayPanel(_calSelected);
   }
 
@@ -1508,7 +1584,7 @@
     if (!panel) return;
     panel.innerHTML = `<div style="color:var(--g-mid);text-align:center;padding:24px">Cargando…</div>`;
 
-    const res  = await fetch(`/api/admin/schedule/${date}`, { headers: authHeader() });
+    const res  = await apiFetch(`/api/admin/schedule/${date}`, {});
     const data = await res.json();
 
     // Usar los slots locales (_cfg) para reflejar cambios aunque no se hayan guardado.
@@ -1572,21 +1648,21 @@
   }
 
   async function slotBlock(date, time) {
-    await fetch('/api/admin/blocked-slots', { method:'POST', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify({date,time}) });
+    await apiFetch('/api/admin/blocked-slots', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date,time}) });
     loadDayPanel(date);
     calLoad();
     showDToast(`✓ ${time} bloqueado el ${date.split('-').reverse().join('/')}`);
   }
 
   async function slotUnblock(date, time) {
-    await fetch(`/api/admin/blocked-slots/${date}/${encodeURIComponent(time)}`, { method:'DELETE', headers: authHeader() });
+    await apiFetch(`/api/admin/blocked-slots/${date}/${encodeURIComponent(time)}`, { method:'DELETE' });
     loadDayPanel(date);
     calLoad();
     showDToast(`✓ ${time} desbloqueado`);
   }
 
   async function exportAndDownload() {
-    const res  = await fetch('/api/admin/export', { headers: authHeader() });
+    const res  = await apiFetch('/api/admin/export', {});
     const data = await res.json();
     // Descargar config.json
     const cfgBlob = new Blob([JSON.stringify(data.config, null, 2)], { type:'application/json' });
@@ -1611,7 +1687,7 @@
     const fd = new FormData();
     fd.append('image', file);
     fd.append('slot', slot);
-    const res = await fetch('/api/admin/upload', { method:'POST', headers: authHeader(), body: fd });
+    const res = await apiFetch('/api/admin/upload', { method:'POST', body: fd });
     const data = await res.json();
     if (data.ok) {
       const preview = document.getElementById(`img-preview-${slot}`);
