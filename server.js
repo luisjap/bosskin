@@ -498,6 +498,11 @@ app.delete('/api/admin/blocked-slots/:date/:time', adminLimiter, adminAuth, (req
   res.json({ ok:true });
 });
 
+/* ── Export config/content como JSON (para sincronizar con repo) ──────────── */
+app.get('/api/admin/export', adminLimiter, adminAuth, (req, res) => {
+  res.json({ config: readConfig(), content: readContent() });
+});
+
 /* ── Calendario ICS ───────────────────────────────────────────────────────── */
 function calToken() { return crypto.createHash('sha256').update((process.env.ADMIN_PASSWORD||'')+'ics').digest('hex').slice(0,20); }
 function toICSDate(date, time, offsetMins=0) {

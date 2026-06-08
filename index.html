@@ -1379,7 +1379,16 @@
     if (c.contact?.tiktok)    $$('a[aria-label="TikTok"]').forEach(a =>    a.href = c.contact.tiktok);
 
     // Hero
-    if (c.hero?.badge)    { const el = $('.hero-tag');  if (el) { const dot = el.querySelector('::before'); el.textContent = c.hero.badge; } }
+    if (c.hero?.badge)    { const el = $('.hero-tag');  if (el) el.textContent = c.hero.badge; }
+    if (c.hero?.title) {
+      const el = $('.hero-h1');
+      if (el) {
+        const parts = c.hero.title.split('\n');
+        el.innerHTML = parts.length > 1
+          ? `${parts[0]}<br><em>${parts[1]}</em>`
+          : c.hero.title;
+      }
+    }
     if (c.hero?.subtitle) { const el = $('.hero-sub');  if (el) el.textContent = c.hero.subtitle; }
     if (c.hero?.trustText){ const el = $('.hero-trust-txt strong'); if (el) el.textContent = c.hero.trustText; }
 

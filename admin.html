@@ -476,7 +476,13 @@
     <div class="d-panel" id="dtab-panel-config">
       <div class="save-bar">
         <span class="save-bar-msg">💡 Edita los servicios y horarios disponibles para tus clientes.</span>
-        <button class="btn-save" id="btn-save-config" onclick="saveConfig()">Guardar cambios</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-save" style="background:rgba(255,255,255,.1);color:var(--g-light);font-size:.78rem" onclick="exportAndDownload()" title="Descarga config.json y content.json para subirlos al repo y que los cambios sean permanentes">⬇ Exportar</button>
+          <button class="btn-save" id="btn-save-config" onclick="saveConfig()">Guardar cambios</button>
+        </div>
+      </div>
+      <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:.78rem;color:rgba(251,191,36,.8);line-height:1.5">
+        ⚠️ Los cambios guardados aquí son inmediatos, pero se reinician si se hace un nuevo deploy del sitio. Para hacerlos permanentes, usa <strong>⬇ Exportar</strong> y envía los archivos para actualizar el repositorio.
       </div>
 
       <div class="cfg-section-title">Servicios</div>
@@ -531,7 +537,13 @@
     <div class="d-panel" id="dtab-panel-contenido">
       <div class="save-bar">
         <span class="save-bar-msg">✏️ Edita textos, datos de contacto e imágenes del sitio.</span>
-        <button class="btn-save" id="btn-save-content" onclick="saveContent()">Guardar cambios</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-save" style="background:rgba(255,255,255,.1);color:var(--g-light);font-size:.78rem" onclick="exportAndDownload()" title="Exportar para permanencia">⬇ Exportar</button>
+          <button class="btn-save" id="btn-save-content" onclick="saveContent()">Guardar cambios</button>
+        </div>
+      </div>
+      <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:.78rem;color:rgba(251,191,36,.8);line-height:1.5">
+        ⚠️ Los cambios guardados aquí son inmediatos, pero se reinician si se hace un nuevo deploy del sitio. Para hacerlos permanentes, usa <strong>⬇ Exportar</strong> y envía los archivos para actualizar el repositorio.
       </div>
 
       <div class="cfg-section-title">Contacto &amp; Redes Sociales</div>
@@ -1571,6 +1583,26 @@
     loadDayPanel(date);
     calLoad();
     showDToast(`✓ ${time} desbloqueado`);
+  }
+
+  async function exportAndDownload() {
+    const res  = await fetch('/api/admin/export', { headers: authHeader() });
+    const data = await res.json();
+    // Descargar config.json
+    const cfgBlob = new Blob([JSON.stringify(data.config, null, 2)], { type:'application/json' });
+    const cfgLink = document.createElement('a');
+    cfgLink.href = URL.createObjectURL(cfgBlob);
+    cfgLink.download = 'config.json';
+    cfgLink.click();
+    // Descargar content.json con un pequeño delay
+    setTimeout(() => {
+      const cntBlob = new Blob([JSON.stringify(data.content, null, 2)], { type:'application/json' });
+      const cntLink = document.createElement('a');
+      cntLink.href = URL.createObjectURL(cntBlob);
+      cntLink.download = 'content.json';
+      cntLink.click();
+      showDToast('✓ Archivos exportados — reemplaza los del proyecto y haz push para permanencia');
+    }, 400);
   }
 
   async function uploadImage(slot, input) {
