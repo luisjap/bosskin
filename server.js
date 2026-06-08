@@ -166,6 +166,19 @@ function findOccupyingBooking(slotTime, dayBookings, services) {
   return null;
 }
 
+// Verifica si agendar un servicio de `requestedDur` minutos en `slotTime`
+// chocaría con alguna reserva existente (chequeo hacia adelante)
+function wouldConflictForward(slotTime, requestedDur, dayBookings) {
+  if (!requestedDur) return false;
+  const slotStart = toMinutes(slotTime);
+  const slotEnd   = slotStart + requestedDur;
+  return dayBookings.some(b => {
+    const bStart = toMinutes(b.time);
+    // El nuevo bloque [slotStart, slotEnd) se superpone con el inicio de b
+    return bStart > slotStart && bStart < slotEnd;
+  });
+}
+
 /* ── Admin auth ───────────────────────────────────────────────────────────── */
 function adminAuth(req, res, next) {
   if (req.headers['authorization'] === `Bearer ${process.env.ADMIN_PASSWORD}`) return next();
@@ -216,11 +229,15 @@ app.get('/api/content', (req, res) => {
 
 /* ── Horarios disponibles ─────────────────────────────────────────────────── */
 app.get('/api/slots', slotLimiter, (req, res) => {
-  const { date } = req.query;
+  const { date, service: serviceKey } = req.query;
   if (!date || !DATE_RE.test(date)) return res.status(400).json({ error:'Fecha inválida' });
 
   const cfg = readConfig();
   const { slots, workdays, minAdvanceHours = 2, maxAdvanceDays = 60 } = cfg.schedule;
+
+  // Duración del servicio solicitado (para chequeo hacia adelante)
+  const requestedSvc = cfg.services.find(s => s.key === serviceKey && s.active);
+  const requestedDur = requestedSvc?.duration || 0;
 
   // Verificar día laborable
   const [y, m, d] = date.split('-').map(Number);
@@ -246,7 +263,8 @@ app.get('/api/slots', slotLimiter, (req, res) => {
     const slotDt    = new Date(y, m-1, d, h, min);
     const hoursLeft = (slotDt - now) / 3_600_000;
     const occupied  = !!findOccupyingBooking(t, dayBookings, cfg.services);
-    return { time: t, available: !occupied && !blockedSlots.includes(t) && hoursLeft >= minAdvanceHours };
+    const forward   = wouldConflictForward(t, requestedDur, dayBookings);
+    return { time: t, available: !occupied && !forward && !blockedSlots.includes(t) && hoursLeft >= minAdvanceHours };
   }));
 });
 

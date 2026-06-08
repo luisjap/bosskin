@@ -1093,11 +1093,14 @@
     document.body.style.overflow = 'hidden';
     const today = new Date().toISOString().split('T')[0];
     const dateEl = document.getElementById('bk-date');
+    const prevDate = dateEl.value;
     dateEl.min = today;
     dateEl.value = '';
     document.getElementById('bk-time').value = '';
     document.getElementById('booking-form').reset();
     renderSlots(null);
+    // Si ya había una fecha elegida, recargar slots con el nuevo servicio
+    if (prevDate) loadSlots(prevDate);
     document.getElementById('bk-form-wrap').classList.remove('bk-hidden');
     document.getElementById('bk-success').classList.add('bk-hidden');
   }
@@ -1130,12 +1133,24 @@
     document.getElementById('bk-time').value = t;
   }
 
+  async function loadSlots(date) {
+    if (!date) return;
+    document.getElementById('bk-time').value = '';
+    document.getElementById('bk-slots').innerHTML = '<span class="bk-slot-none">Cargando horarios…</span>';
+    try {
+      const r = await fetch(`/api/slots?date=${date}&service=${currentService.key}`);
+      renderSlots(await r.json());
+    } catch (_) {
+      document.getElementById('bk-slots').innerHTML = '<span class="bk-slot-none">Error al cargar horarios</span>';
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('bk-date').addEventListener('change', async function() {
       document.getElementById('bk-time').value = '';
       document.getElementById('bk-slots').innerHTML = '<span class="bk-slot-none">Cargando horarios…</span>';
       try {
-        const r = await fetch(`/api/slots?date=${this.value}`);
+        const r = await fetch(`/api/slots?date=${this.value}&service=${currentService.key}`);
         renderSlots(await r.json());
       } catch (_) {
         document.getElementById('bk-slots').innerHTML = '<span class="bk-slot-none">Error al cargar horarios</span>';
