@@ -148,6 +148,24 @@ const bookingLimiter = rateLimit({ windowMs:60_000, max:5,  message:{ error:'Dem
 const adminLimiter   = rateLimit({ windowMs:60_000, max:60, message:{ error:'Demasiadas solicitudes.' } });
 const slotLimiter    = rateLimit({ windowMs:60_000, max:30, message:{ error:'Demasiadas solicitudes.' } });
 
+/* ── Duración de servicio: chequeo de solapamiento ───────────────────────── */
+function toMinutes(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Devuelve la reserva que ocupa el slot dado (considerando su duración), o null
+function findOccupyingBooking(slotTime, dayBookings, services) {
+  const slotStart = toMinutes(slotTime);
+  for (const b of dayBookings) {
+    const svc  = services.find(s => s.name === b.service);
+    const dur  = svc?.duration || 60;
+    const bStart = toMinutes(b.time);
+    if (slotStart >= bStart && slotStart < bStart + dur) return b;
+  }
+  return null;
+}
+
 /* ── Admin auth ───────────────────────────────────────────────────────────── */
 function adminAuth(req, res, next) {
   if (req.headers['authorization'] === `Bearer ${process.env.ADMIN_PASSWORD}`) return next();
@@ -220,14 +238,15 @@ app.get('/api/slots', slotLimiter, (req, res) => {
   if (bl.dates.includes(date)) return res.json(slots.map(t => ({ time: t, available: false })));
 
   const blockedSlots = bl.slots[date] || [];
-  const taken = getBookings().filter(b => b.date === date && b.status !== 'cancelado').map(b => b.time);
-  const now   = new Date();
+  const dayBookings  = getBookings().filter(b => b.date === date && b.status !== 'cancelado');
+  const now          = new Date();
 
   res.json(slots.map(t => {
     const [h, min] = t.split(':').map(Number);
-    const slotDt   = new Date(y, m-1, d, h, min);
+    const slotDt    = new Date(y, m-1, d, h, min);
     const hoursLeft = (slotDt - now) / 3_600_000;
-    return { time: t, available: !taken.includes(t) && !blockedSlots.includes(t) && hoursLeft >= minAdvanceHours };
+    const occupied  = !!findOccupyingBooking(t, dayBookings, cfg.services);
+    return { time: t, available: !occupied && !blockedSlots.includes(t) && hoursLeft >= minAdvanceHours };
   }));
 });
 
@@ -421,8 +440,8 @@ app.get('/api/admin/schedule/:date', adminLimiter, adminAuth, (req, res) => {
 
   const result = cfg.schedule.slots.map(time => {
     if (fullBlocked) return { time, status:'blocked', fullDay:true };
-    const bk = dayBookings.find(b => b.time === time);
-    if (bk)                        return { time, status:'booked',    booking:{ id:bk.id, name:bk.name, service:bk.service, email:bk.email, phone:bk.phone } };
+    const bk = findOccupyingBooking(time, dayBookings, cfg.services);
+    if (bk)                          return { time, status:'booked',  booking:{ id:bk.id, name:bk.name, service:bk.service, email:bk.email, phone:bk.phone, bookedAt: bk.time } };
     if (blockedSlots.includes(time)) return { time, status:'blocked' };
     return { time, status:'available' };
   });

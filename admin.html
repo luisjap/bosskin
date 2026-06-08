@@ -220,22 +220,17 @@
     .cal-badge { position: absolute; top: 2px; right: 2px; background: #fbbf24; color: #000; border-radius: 100px; font-size: .55rem; font-weight: 800; min-width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
     .cal-badge.blocked { background: #f87171; color: #fff; }
 
-    /* Day slots panel */
+    /* Day slots panel — usa el mismo slot-btn base */
     .day-panel { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px; }
     .day-panel-title { font-family: var(--font-t); font-size: 1rem; font-weight: 700; color: var(--white); margin-bottom: 4px; text-transform: capitalize; }
     .day-panel-sub { font-size: .76rem; color: var(--g-mid); margin-bottom: 16px; }
-    .day-slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
-    .day-slot {
-      border-radius: 10px; padding: 10px 8px; text-align: center;
-      cursor: pointer; transition: all .2s; border: 1.5px solid transparent;
-    }
-    .day-slot-time { font-size: .92rem; font-weight: 700; display: block; }
-    .day-slot-label { font-size: .68rem; margin-top: 2px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .day-slot.available { background: rgba(26,107,74,.1); border-color: rgba(26,107,74,.25); color: var(--emerald-lt); }
-    .day-slot.available:hover { background: rgba(26,107,74,.25); border-color: var(--emerald); }
-    .day-slot.booked { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.3); color: #fbbf24; cursor: default; }
-    .day-slot.blocked { background: rgba(224,82,82,.1); border-color: rgba(224,82,82,.3); color: #f87171; }
-    .day-slot.blocked:hover { background: rgba(224,82,82,.2); }
+    .day-slots-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    /* Extensiones de .slot-btn para el panel de día */
+    .slot-btn.booked     { background: rgba(245,158,11,.15); border-color: rgba(245,158,11,.4); color: #fbbf24; cursor: default; }
+    .slot-btn.booked .slot-sub { display: block; font-size: .65rem; color: rgba(251,191,36,.75); margin-top: 2px; font-weight: 400; }
+    .slot-btn.slot-blocked { background: rgba(224,82,82,.12); border-color: rgba(224,82,82,.35); color: #f87171; }
+    .slot-btn.slot-blocked:hover { background: rgba(224,82,82,.22); border-color: #f87171; }
+    .slot-btn .slot-sub { display: none; }
     .day-fullblock-bar { background: rgba(224,82,82,.1); border: 1px solid rgba(224,82,82,.25); border-radius: 8px; padding: 10px 14px; font-size: .82rem; color: #f87171; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
     /* ── Desktop toast ── */
@@ -1511,22 +1506,23 @@
 
     const slotsHTML = data.slots.map(s => {
       if (s.status === 'booked') {
-        return `<div class="day-slot booked" title="${esc(s.booking.name)} · ${esc(s.booking.service)}">
-          <span class="day-slot-time">${s.time}</span>
-          <span class="day-slot-label">${esc(s.booking.name.split(' ')[0])}</span>
-        </div>`;
+        // Si este slot es el slot original de la reserva o uno cubierto por su duración
+        const isOriginal = s.booking.bookedAt === s.time;
+        const firstName  = esc(s.booking.name.split(' ')[0]);
+        const svcShort   = esc(s.booking.service.replace('Asesoría Personalizada','Asesoría').replace('Consulta Express','Express').replace('Revisión de Productos','Revisión'));
+        return `<button class="slot-btn booked" disabled title="${esc(s.booking.name)} · ${esc(s.booking.service)}">
+          ${s.time}
+          <span class="slot-sub">${isOriginal ? firstName : '↑ ' + s.booking.bookedAt}</span>
+        </button>`;
       }
       if (s.status === 'blocked') {
-        return `<div class="day-slot blocked" onclick="slotUnblock('${date}','${s.time}')" title="Clic para desbloquear">
-          <span class="day-slot-time">${s.time}</span>
-          <span class="day-slot-label">Bloqueado ✕</span>
-        </div>`;
+        return `<button class="slot-btn slot-blocked" onclick="slotUnblock('${date}','${s.time}')" title="Clic para desbloquear">
+          ${s.time} ✕
+        </button>`;
       }
-      // available
-      return `<div class="day-slot available" onclick="slotBlock('${date}','${s.time}')" title="Clic para bloquear">
-        <span class="day-slot-time">${s.time}</span>
-        <span class="day-slot-label">Disponible</span>
-      </div>`;
+      return `<button class="slot-btn active" onclick="slotBlock('${date}','${s.time}')" title="Clic para bloquear este horario">
+        ${s.time}
+      </button>`;
     }).join('');
 
     panel.innerHTML = `
@@ -1540,8 +1536,12 @@
       ${fullBlockBar}
       <div class="day-slots-grid">${slotsHTML}</div>
       ${!data.fullBlocked ? `
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:center">
-        <span style="font-size:.75rem;color:var(--g-mid)">Clic en verde para bloquear · Clic en rojo para desbloquear</span>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:.73rem;color:var(--g-mid)">
+          <span><span style="color:var(--emerald-lt)">●</span> Verde = disponible (clic para bloquear)</span>
+          <span><span style="color:#fbbf24">●</span> Ámbar = reservado (respeta duración del servicio)</span>
+          <span><span style="color:#f87171">●</span> Rojo = bloqueado (clic para liberar)</span>
+        </div>
       </div>` : ''}`;
   }
 
