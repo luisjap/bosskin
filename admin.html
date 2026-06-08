@@ -2449,8 +2449,9 @@
   let _pvYear, _pvMonth, _pvBlocked = [];
 
   async function renderMobilePreview() {
-    if (!_cfg) await loadConfigEditor();
     if (!_pvYear) { const n = new Date(); _pvYear = n.getFullYear(); _pvMonth = n.getMonth() + 1; }
+    // Siempre recarga config y bloqueos para que el preview sea exacto
+    try { const r = await apiFetch('/api/admin/config', {}); _cfg = await r.json(); } catch { if (!_cfg) return; }
     try { const r = await apiFetch('/api/admin/blocked', {}); _pvBlocked = await r.json(); } catch { _pvBlocked = []; }
     pvCalRender();
     document.getElementById('pv-day-panel').style.display = 'none';
