@@ -298,7 +298,7 @@ app.get('/api/slots', slotLimiter, (req, res) => {
   if (!date || !DATE_RE.test(date)) return res.status(400).json({ error:'Fecha inválida' });
 
   const cfg = readConfig();
-  const { slots, workdays, minAdvanceHours = 2, maxAdvanceDays = 60, openUntil } = cfg.schedule;
+  const { slots, minAdvanceHours = 2, maxAdvanceDays = 60, openUntil } = cfg.schedule;
 
   // Si hay fecha límite de apertura y la fecha solicitada la supera → todo cerrado
   if (openUntil && DATE_RE.test(openUntil) && date > openUntil) {
@@ -309,10 +309,8 @@ app.get('/api/slots', slotLimiter, (req, res) => {
   const requestedSvc = cfg.services.find(s => s.key === serviceKey && s.active);
   const requestedDur = requestedSvc?.duration || 0;
 
-  // Verificar día laborable
+  // Todos los días son laborables — solo se cierran via bloqueo explícito desde Agenda
   const [y, m, d] = date.split('-').map(Number);
-  const dow = new Date(y, m - 1, d).getDay();
-  if (!workdays.includes(dow)) return res.json(slots.map(t => ({ time: t, available: false })));
 
   // Verificar rango de fechas
   const today     = new Date(); today.setHours(0,0,0,0);
