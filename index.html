@@ -696,7 +696,7 @@
           <div class="svc-feat">Respuesta en 24 horas</div>
           <div class="svc-feat">Pago previo confirmado</div>
         </div>
-        <a href="#" onclick="openBooking('express');return false;" class="btn btn-ol" style="width:fit-content;margin-top:auto">Agendar →</a>
+        <button onclick="openBooking('express')" class="btn btn-ol" style="width:fit-content;margin-top:auto">Agendar →</button>
       </div>
 
       <div class="svc-card feat svc-slide-center">
@@ -711,7 +711,7 @@
           <div class="svc-feat">Lista de productos reales</div>
           <div class="svc-feat">Seguimiento incluido</div>
         </div>
-        <a href="#" class="btn btn-em" style="width:fit-content;margin-top:auto" onclick="openBooking('asesoria');return false;">Agendar ahora →</a>
+        <button onclick="openBooking('asesoria')" class="btn btn-em" style="width:fit-content;margin-top:auto">Agendar ahora →</button>
       </div>
 
       <div class="svc-card svc-slide-right">
@@ -724,7 +724,7 @@
           <div class="svc-feat">Análisis de ingredientes</div>
           <div class="svc-feat">Lista de substitutos</div>
         </div>
-        <a href="#" onclick="openBooking('revision');return false;" class="btn btn-ol" style="width:fit-content;margin-top:auto">Agendar →</a>
+        <button onclick="openBooking('revision')" class="btn btn-ol" style="width:fit-content;margin-top:auto">Agendar →</button>
       </div>
 
     </div>
@@ -855,7 +855,7 @@
       <h2 class="cta-t rv d1">¿Lista para empezar<br>con <em>tu piel</em>?</h2>
       <p class="cta-s rv d2">Agenda tu consulta y recibe una asesoría personalizada basada en evidencia científica.</p>
       <div class="cta-acts rv d3">
-        <a href="#" onclick="openBooking();return false;" class="btn btn-em btn-lg">
+        <button onclick="openBooking()" class="btn btn-em btn-lg">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           Agendar consulta
         </a>
@@ -899,7 +899,7 @@
       <ul>
         <li><a href="mailto:<!-- EMAIL -->"><!-- EMAIL --></a></li>
         <li><a href="https://wa.me/<!-- NUMERO-WHATSAPP -->" target="_blank">WhatsApp</a></li>
-        <li><a href="#" onclick="openBooking();return false;">Agenda online</a></li>
+        <li><a href="#" onclick="openBooking();event.preventDefault()">Agenda online</a></li>
         <li><a href="https://www.instagram.com/barbivillaloboss" target="_blank">Instagram</a></li>
       </ul>
     </div>
@@ -1087,23 +1087,29 @@
   };
   let currentService = BK_SERVICES.asesoria;
 
+  /* Cuando el usuario vuelve con el botón Atrás desde MP, el navegador
+     restaura la página del bfcache con el modal abierto y body fijo.
+     pageshow con persisted:true indica esa restauración — limpiamos todo. */
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.top      = '';
+    document.body.style.width    = '';
+    document.getElementById('bk-overlay').classList.remove('open');
+  });
+
   let _scrollY = 0;
   function openBooking(serviceKey) {
     currentService = BK_SERVICES[serviceKey] || BK_SERVICES.asesoria;
     document.getElementById('bk-title').textContent = currentService.name;
     document.getElementById('bk-overlay').classList.add('open');
-    // iOS Safari scroll lock. Si el body ya está fijo (p.ej. volviendo desde MP
-    // con bfcache), leer la posición real desde style.top en vez de scrollY
-    // (scrollY devuelve 0 cuando body está en position:fixed).
-    if (document.body.style.position === 'fixed') {
-      _scrollY = Math.abs(parseInt(document.body.style.top || '0'));
-    } else {
-      _scrollY = window.scrollY;
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top      = `-${_scrollY}px`;
-      document.body.style.width    = '100%';
-    }
+    // iOS Safari scroll lock (pageshow limpia el estado al volver desde MP)
+    _scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top      = `-${_scrollY}px`;
+    document.body.style.width    = '100%';
     const today  = new Date().toISOString().split('T')[0];
     const maxDt  = new Date(); maxDt.setDate(maxDt.getDate() + 60);
     const maxDay = maxDt.toISOString().split('T')[0];
