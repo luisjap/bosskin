@@ -1092,12 +1092,18 @@
     currentService = BK_SERVICES[serviceKey] || BK_SERVICES.asesoria;
     document.getElementById('bk-title').textContent = currentService.name;
     document.getElementById('bk-overlay').classList.add('open');
-    // iOS Safari scroll lock: position:fixed preserva la posición
-    _scrollY = window.scrollY;
-    document.body.style.overflow  = 'hidden';
-    document.body.style.position  = 'fixed';
-    document.body.style.top       = `-${_scrollY}px`;
-    document.body.style.width     = '100%';
+    // iOS Safari scroll lock. Si el body ya está fijo (p.ej. volviendo desde MP
+    // con bfcache), leer la posición real desde style.top en vez de scrollY
+    // (scrollY devuelve 0 cuando body está en position:fixed).
+    if (document.body.style.position === 'fixed') {
+      _scrollY = Math.abs(parseInt(document.body.style.top || '0'));
+    } else {
+      _scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top      = `-${_scrollY}px`;
+      document.body.style.width    = '100%';
+    }
     const today  = new Date().toISOString().split('T')[0];
     const maxDt  = new Date(); maxDt.setDate(maxDt.getDate() + 60);
     const maxDay = maxDt.toISOString().split('T')[0];
