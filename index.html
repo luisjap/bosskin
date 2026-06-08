@@ -1426,10 +1426,23 @@
 
   function applyServices(svcs) {
     if (!svcs?.length) return;
-    svcs.forEach(s => {
+    const cards = document.querySelectorAll('.svc-card');
+    svcs.forEach((s, i) => {
+      // Actualizar modal de reserva
       if (BK_SERVICES[s.key]) {
         BK_SERVICES[s.key].name  = s.name;
         BK_SERVICES[s.key].price = s.price;
+      }
+      // Actualizar tarjeta visible en la página
+      const card = cards[i];
+      if (!card) return;
+      const nameEl  = card.querySelector('.svc-name');
+      const descEl  = card.querySelector('.svc-desc');
+      const featsEl = card.querySelector('.svc-feats');
+      if (nameEl  && s.name)          nameEl.textContent  = s.name;
+      if (descEl  && s.description)   descEl.textContent  = s.description;
+      if (featsEl && s.features?.length) {
+        featsEl.innerHTML = s.features.map(f => `<div class="svc-feat">${f}</div>`).join('');
       }
     });
   }
