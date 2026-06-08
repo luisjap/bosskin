@@ -49,12 +49,16 @@ const DEFAULT_CONFIG = {
     { key:'asesoria', name:'Asesoría Personalizada', price:20000, duration:60, active:true, description:'Sesión de 60 minutos donde analizamos tu piel en profundidad.', features:['60 min de sesión completa','Rutina completa por escrito','Lista de productos reales','Seguimiento incluido'] },
     { key:'revision', name:'Revisión de Productos',  price:10000, duration:20, active:true, description:'Revisamos los productos que ya tienes o planeas comprar.', features:['20 minutos de sesión','Hasta 10 productos revisados','Análisis de ingredientes'] },
   ],
-  schedule: { slots:['11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'], workdays:[1,2,3,4,5], minAdvanceHours:2, maxAdvanceDays:60 },
+  schedule: { slots:['11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'], workdays:[1,2,3,4,5], minAdvanceHours:2, maxAdvanceDays:60, openUntil:null },
 };
 
 function readConfig() {
   const src = fs.existsSync(CFG_FILE) ? CFG_FILE : path.join(__dirname, 'config.json');
-  try { return JSON.parse(fs.readFileSync(src, 'utf8')); } catch { return DEFAULT_CONFIG; }
+  try {
+    const stored = JSON.parse(fs.readFileSync(src, 'utf8'));
+    // Merge profundo para incluir campos nuevos del DEFAULT sin perder los guardados
+    return { ...DEFAULT_CONFIG, ...stored, schedule: { ...DEFAULT_CONFIG.schedule, ...stored.schedule } };
+  } catch { return DEFAULT_CONFIG; }
 }
 function writeConfig(data) {
   const tmp = CFG_FILE + '.tmp';
@@ -294,7 +298,12 @@ app.get('/api/slots', slotLimiter, (req, res) => {
   if (!date || !DATE_RE.test(date)) return res.status(400).json({ error:'Fecha inválida' });
 
   const cfg = readConfig();
-  const { slots, workdays, minAdvanceHours = 2, maxAdvanceDays = 60 } = cfg.schedule;
+  const { slots, workdays, minAdvanceHours = 2, maxAdvanceDays = 60, openUntil } = cfg.schedule;
+
+  // Si hay fecha límite de apertura y la fecha solicitada la supera → todo cerrado
+  if (openUntil && DATE_RE.test(openUntil) && date > openUntil) {
+    return res.json(slots.map(t => ({ time: t, available: false })));
+  }
 
   // Duración del servicio solicitado (para chequeo hacia adelante)
   const requestedSvc = cfg.services.find(s => s.key === serviceKey && s.active);

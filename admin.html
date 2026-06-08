@@ -519,6 +519,26 @@
 
     <!-- Panel: Agenda -->
     <div class="d-panel" id="dtab-panel-agenda">
+
+      <!-- Control de apertura de agenda -->
+      <div class="sch-section" style="margin-bottom:22px">
+        <div class="sch-label">Apertura de agenda</div>
+        <div id="agenda-until-status" style="font-size:.84rem;margin-bottom:14px;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+          Cargando…
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="cfg-field" style="flex:1;min-width:160px">
+            <label>Disponible hasta</label>
+            <input class="cfg-input" type="date" id="agenda-until-date" style="color-scheme:dark">
+          </div>
+          <button class="btn-sm accent" onclick="saveOpenUntil()" title="Guarda la fecha límite">Guardar</button>
+          <button class="btn-sm" onclick="extendOpenUntil(1)" title="Extiende un mes más desde la fecha actual">+1 mes</button>
+          <button class="btn-sm" onclick="extendOpenUntil(3)" title="Extiende tres meses más">+3 meses</button>
+          <button class="btn-sm danger" onclick="closeAgenda()" title="Bloquea todo desde hoy en adelante">Cerrar agenda</button>
+          <button class="btn-sm" onclick="openAgendaForever()" title="Sin límite — abre todas las fechas futuras">Sin límite</button>
+        </div>
+      </div>
+
       <p style="font-size:.82rem;color:var(--g-mid);margin-bottom:20px">Haz clic en un día para ver y gestionar sus horarios. Verde = disponible · Ámbar = reservado · Rojo = bloqueado.</p>
       <div class="cal-wrap">
         <div class="cal-box">
@@ -1246,7 +1266,10 @@
       document.getElementById(`dtab-panel-${t}`)?.classList.toggle('active', t === tab);
     });
     if (tab === 'agenda') {
-      loadConfigEditor().then(() => { if (!_calYear) calInit(); else calRender(); });
+      loadConfigEditor().then(() => {
+        if (!_calYear) calInit(); else calRender();
+        renderOpenUntilStatus();
+      });
     }
     if (tab === 'config') loadConfigEditor();
     if (tab === 'contenido') loadContentEditor();
@@ -1668,6 +1691,76 @@
     loadDayPanel(date);
     calLoad();
     showDToast(`✓ ${time} desbloqueado`);
+  }
+
+  /* ── Control de apertura de agenda (openUntil) ───────────────────────── */
+  function renderOpenUntilStatus() {
+    const status = document.getElementById('agenda-until-status');
+    const input  = document.getElementById('agenda-until-date');
+    if (!status || !input || !_cfg) return;
+    const val = _cfg.schedule?.openUntil;
+    input.value = val || '';
+    if (val) {
+      const label = new Date(val + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+      const isPast = val < new Date().toISOString().split('T')[0];
+      if (isPast) {
+        status.style.borderColor = 'rgba(224,82,82,.4)';
+        status.style.background  = 'rgba(224,82,82,.08)';
+        status.innerHTML = `<span style="color:#f87171">⛔ Agenda cerrada</span> — Los clientes no pueden agendar ninguna fecha (última fecha disponible fue el ${label})`;
+      } else {
+        status.style.borderColor = 'rgba(245,158,11,.3)';
+        status.style.background  = 'rgba(245,158,11,.06)';
+        status.innerHTML = `<span style="color:#fbbf24">📅 Agenda abierta hasta el ${label}</span> — Las fechas posteriores están cerradas para clientes`;
+      }
+    } else {
+      status.style.borderColor = 'rgba(26,107,74,.35)';
+      status.style.background  = 'rgba(26,107,74,.06)';
+      status.innerHTML = `<span style="color:var(--emerald-lt)">✓ Sin límite</span> — La agenda está abierta para todas las fechas futuras`;
+    }
+  }
+
+  async function saveOpenUntil() {
+    if (!_cfg) return;
+    const val = document.getElementById('agenda-until-date').value;
+    _cfg.schedule.openUntil = val || null;
+    const btn = document.getElementById('btn-save-config') || {};
+    try {
+      await apiFetch('/api/admin/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_cfg) });
+      renderOpenUntilStatus();
+      calRender();
+      showDToast(val ? `✓ Agenda abierta hasta el ${val}` : '✓ Agenda sin límite de fecha');
+    } catch { showDToast('✗ Error al guardar', false); }
+  }
+
+  function extendOpenUntil(months) {
+    const input   = document.getElementById('agenda-until-date');
+    const base    = input.value ? new Date(input.value + 'T12:00:00') : new Date();
+    base.setMonth(base.getMonth() + months);
+    // Último día de ese mes
+    const last = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+    input.value = last.toISOString().split('T')[0];
+  }
+
+  async function closeAgenda() {
+    if (!_cfg) return;
+    // Establece openUntil a ayer → todo el futuro queda bloqueado
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    document.getElementById('agenda-until-date').value = yesterday.toISOString().split('T')[0];
+    _cfg.schedule.openUntil = yesterday.toISOString().split('T')[0];
+    await apiFetch('/api/admin/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_cfg) });
+    renderOpenUntilStatus();
+    calRender();
+    showDToast('⛔ Agenda cerrada para todos los días futuros');
+  }
+
+  async function openAgendaForever() {
+    if (!_cfg) return;
+    document.getElementById('agenda-until-date').value = '';
+    _cfg.schedule.openUntil = null;
+    await apiFetch('/api/admin/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_cfg) });
+    renderOpenUntilStatus();
+    calRender();
+    showDToast('✓ Agenda sin límite — abierta indefinidamente');
   }
 
   /* ── Bloquear / desbloquear día completo ──────────────────────────────── */
