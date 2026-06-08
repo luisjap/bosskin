@@ -1585,17 +1585,23 @@
     }).join('');
   }
 
+  function _pvInvalidate() {
+    _pvBlocked = null; // fuerza recarga en próxima visita a Vista Cliente
+    // Si el tab de preview está activo, re-renderizar inmediatamente
+    if (document.getElementById('m-tab-preview')?.style.display === 'block') renderMobilePreview();
+  }
+
   async function mBlockDate() {
     const d = document.getElementById('m-block-date').value;
     if (!d) return;
     await apiFetch('/api/admin/blocked', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date:d}) });
     document.getElementById('m-block-date').value = '';
-    renderMobileBlocked(); renderBlocked();
+    renderMobileBlocked(); renderBlocked(); _pvInvalidate();
   }
 
   async function mUnblock(d) {
     await apiFetch(`/api/admin/blocked/${d}`, { method:'DELETE' });
-    renderMobileBlocked(); renderBlocked();
+    renderMobileBlocked(); renderBlocked(); _pvInvalidate();
   }
 
   async function mCopyCalendar() {
@@ -2390,27 +2396,27 @@
   async function mSlotBlock(date, time) {
     await apiFetch('/api/admin/blocked-slots', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date,time}) });
     showMToast(`✓ ${time} bloqueado`);
-    mCalSelectDay(date); mCalLoad();
+    mCalSelectDay(date); mCalLoad(); _pvInvalidate();
   }
 
   async function mSlotUnblock(date, time) {
     await apiFetch(`/api/admin/blocked-slots/${date}/${encodeURIComponent(time)}`, { method:'DELETE' });
     showMToast(`✓ ${time} desbloqueado`);
-    mCalSelectDay(date); mCalLoad();
+    mCalSelectDay(date); mCalLoad(); _pvInvalidate();
   }
 
   async function mBlockFullDay(date) {
     await apiFetch('/api/admin/blocked', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date}) });
     const label = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'long' });
     showMToast(`✓ ${label} bloqueado`);
-    mCalSelectDay(date); mCalLoad(); renderBlocked();
+    mCalSelectDay(date); mCalLoad(); renderBlocked(); _pvInvalidate();
   }
 
   async function mUnblockFullDay(date) {
     await apiFetch(`/api/admin/blocked/${date}`, { method:'DELETE' });
     const label = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'long' });
     showMToast(`✓ ${label} desbloqueado`);
-    mCalSelectDay(date); mCalLoad(); renderBlocked();
+    mCalSelectDay(date); mCalLoad(); renderBlocked(); _pvInvalidate();
   }
 
   async function mBlockMonth() {
@@ -2427,7 +2433,7 @@
     const res = await apiFetch('/api/admin/blocked-bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dates}) });
     const data = await res.json();
     showMToast(`✓ ${data.added} días bloqueados`);
-    mCalLoad(); renderBlocked();
+    mCalLoad(); renderBlocked(); _pvInvalidate();
   }
 
   async function mUnblockMonth() {
@@ -2440,19 +2446,19 @@
     const res = await apiFetch('/api/admin/blocked-bulk', { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dates}) });
     const data = await res.json();
     showMToast(data.removed ? `✓ ${data.removed} días liberados` : 'Sin bloqueados en este mes');
-    mCalLoad(); renderBlocked();
+    mCalLoad(); renderBlocked(); _pvInvalidate();
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
      VISTA CLIENTE (PREVIEW)
   ══════════════════════════════════════════════════════════════════════════ */
-  let _pvYear, _pvMonth, _pvBlocked = [];
+  let _pvYear, _pvMonth, _pvBlocked = null;
 
   async function renderMobilePreview() {
     if (!_pvYear) { const n = new Date(); _pvYear = n.getFullYear(); _pvMonth = n.getMonth() + 1; }
     // Siempre recarga config y bloqueos para que el preview sea exacto
     try { const r = await apiFetch('/api/admin/config', {}); _cfg = await r.json(); } catch { if (!_cfg) return; }
-    try { const r = await apiFetch('/api/admin/blocked', {}); _pvBlocked = await r.json(); } catch { _pvBlocked = []; }
+    try { const r = await apiFetch('/api/admin/blocked', {}); _pvBlocked = await r.json(); } catch { _pvBlocked = _pvBlocked ?? []; }
     pvCalRender();
     document.getElementById('pv-day-panel').style.display = 'none';
   }
@@ -2484,7 +2490,7 @@
       const jsDay  = new Date(_pvYear, _pvMonth - 1, d).getDay();
       const isPast = date < today;
       const isWork = workdays.includes(jsDay);
-      const isBlocked  = _pvBlocked.includes(date);
+      const isBlocked  = (_pvBlocked || []).includes(date);
       const isOutRange = date > maxDateStr || (openUntil && date > openUntil);
       const available  = !isPast && isWork && !isBlocked && !isOutRange;
 
