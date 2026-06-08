@@ -328,9 +328,9 @@ app.delete('/api/admin/blocked/:date', adminLimiter, adminAuth, (req, res) => {
 
 /* ── Calendario ICS ───────────────────────────────────────────────────────── */
 const SERVICE_DURATION = {
-  'Consulta Express':       30,
+  'Consulta Express':       25,
   'Asesoría Personalizada': 60,
-  'Revisión de Productos':  30
+  'Revisión de Productos':  20
 };
 
 function calToken() {
