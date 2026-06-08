@@ -181,14 +181,7 @@ const adminLimiter    = rateLimit({ windowMs:60_000, max:60,  message:{ error:'D
 const slotLimiter     = rateLimit({ windowMs:60_000, max:30,  message:{ error:'Demasiadas solicitudes.' } });
 const calendarLimiter = rateLimit({ windowMs:60_000, max:20,  message:'Demasiadas solicitudes.' });
 
-/* ── Validar Origin en métodos mutantes ───────────────────────────────────── */
-app.use((req, res, next) => {
-  if (['POST','PUT','PATCH','DELETE'].includes(req.method)) {
-    const origin = req.headers.origin;
-    if (origin && !ALLOWED.includes(origin)) return res.status(403).json({ error:'No autorizado' });
-  }
-  next();
-});
+
 
 /* ── Duración de servicio: chequeo de solapamiento ───────────────────────── */
 function toMinutes(timeStr) {
