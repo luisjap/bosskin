@@ -1160,7 +1160,11 @@
       document.getElementById(`dtab-${t}`)?.classList.toggle('active', t === tab);
       document.getElementById(`dtab-panel-${t}`)?.classList.toggle('active', t === tab);
     });
-    if (tab === 'config')    { loadConfigEditor(); if (!_calYear) calInit(); else calRender(); }
+    if (tab === 'config') {
+      loadConfigEditor().then(() => {
+        if (!_calYear) calInit(); else calRender();
+      });
+    }
     if (tab === 'contenido') loadContentEditor();
   }
 
@@ -1270,6 +1274,8 @@
     if (idx === -1) { _cfg.schedule.slots.push(time); _cfg.schedule.slots.sort(); }
     else            { _cfg.schedule.slots.splice(idx, 1); }
     btn.classList.toggle('active');
+    // Actualizar el panel de día si hay uno seleccionado
+    if (_calSelected) loadDayPanel(_calSelected);
   }
 
   function addSlot() {
@@ -1492,6 +1498,14 @@
 
     const res  = await fetch(`/api/admin/schedule/${date}`, { headers: authHeader() });
     const data = await res.json();
+
+    // Usar los slots locales (_cfg) para reflejar cambios aunque no se hayan guardado.
+    // El servidor provee el estado (reservado/bloqueado); si el slot no aparece en
+    // el servidor (fue añadido localmente), se muestra como disponible.
+    const serverMap = {};
+    data.slots.forEach(s => { serverMap[s.time] = s; });
+    const localSlots = _cfg?.schedule?.slots || data.slots.map(s => s.time);
+    data.slots = localSlots.map(t => serverMap[t] || { time: t, status: 'available' });
 
     const [y, m, d] = date.split('-');
     const dateLabel  = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
