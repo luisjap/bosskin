@@ -195,6 +195,49 @@
     .btn-save:hover { background: var(--emerald-h); }
     .btn-save:disabled { background: rgba(26,107,74,.4); cursor: wait; }
 
+    /* ── Calendario de agenda ── */
+    .cal-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 900px) { .cal-wrap { grid-template-columns: 1fr; } }
+    .cal-box { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px; }
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .cal-nav-btn { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); color: var(--white); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: background .2s; }
+    .cal-nav-btn:hover { background: rgba(255,255,255,.14); }
+    .cal-month { font-family: var(--font-t); font-size: 1rem; font-weight: 700; color: var(--white); text-transform: capitalize; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .cal-dow { text-align: center; font-size: .65rem; font-weight: 600; letter-spacing: .06em; color: rgba(255,255,255,.3); padding: 4px 0 8px; text-transform: uppercase; }
+    .cal-day {
+      aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; cursor: pointer;
+      font-size: .82rem; color: var(--g-light); position: relative;
+      transition: background .15s, color .15s; border: 1.5px solid transparent;
+    }
+    .cal-day:hover:not(.cal-empty):not(.cal-past):not(.cal-nonwork) { background: rgba(26,107,74,.2); border-color: rgba(26,107,74,.4); }
+    .cal-day.cal-empty   { cursor: default; }
+    .cal-day.cal-past    { opacity: .3; cursor: default; }
+    .cal-day.cal-nonwork { opacity: .25; cursor: default; }
+    .cal-day.cal-today   { border-color: rgba(26,107,74,.6); color: var(--emerald-lt); font-weight: 700; }
+    .cal-day.cal-selected { background: var(--emerald); border-color: var(--emerald); color: #fff !important; font-weight: 700; }
+    .cal-badge { position: absolute; top: 2px; right: 2px; background: #fbbf24; color: #000; border-radius: 100px; font-size: .55rem; font-weight: 800; min-width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+    .cal-badge.blocked { background: #f87171; color: #fff; }
+
+    /* Day slots panel */
+    .day-panel { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px; }
+    .day-panel-title { font-family: var(--font-t); font-size: 1rem; font-weight: 700; color: var(--white); margin-bottom: 4px; text-transform: capitalize; }
+    .day-panel-sub { font-size: .76rem; color: var(--g-mid); margin-bottom: 16px; }
+    .day-slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+    .day-slot {
+      border-radius: 10px; padding: 10px 8px; text-align: center;
+      cursor: pointer; transition: all .2s; border: 1.5px solid transparent;
+    }
+    .day-slot-time { font-size: .92rem; font-weight: 700; display: block; }
+    .day-slot-label { font-size: .68rem; margin-top: 2px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .day-slot.available { background: rgba(26,107,74,.1); border-color: rgba(26,107,74,.25); color: var(--emerald-lt); }
+    .day-slot.available:hover { background: rgba(26,107,74,.25); border-color: var(--emerald); }
+    .day-slot.booked { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.3); color: #fbbf24; cursor: default; }
+    .day-slot.blocked { background: rgba(224,82,82,.1); border-color: rgba(224,82,82,.3); color: #f87171; }
+    .day-slot.blocked:hover { background: rgba(224,82,82,.2); }
+    .day-fullblock-bar { background: rgba(224,82,82,.1); border: 1px solid rgba(224,82,82,.25); border-radius: 8px; padding: 10px 14px; font-size: .82rem; color: #f87171; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
     /* ── Desktop toast ── */
     #d-toast { position: fixed; bottom: 28px; right: 28px; background: #1a1a1a; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: .85rem; box-shadow: 0 8px 28px rgba(0,0,0,.5); z-index: 500; opacity: 0; transition: all .3s; pointer-events: none; border-left: 3px solid var(--emerald); }
     #d-toast.show { opacity: 1; }
@@ -467,6 +510,23 @@
           <div class="cfg-field">
             <label>Días máximos en el futuro</label>
             <input class="cfg-input" type="number" id="sch-max-days" min="1" max="365" value="60">
+          </div>
+        </div>
+      </div>
+      <div class="cfg-section-title" style="margin-top:32px">Agenda por día</div>
+      <p style="font-size:.82rem;color:var(--g-mid);margin-bottom:16px">Haz clic en un día para ver y gestionar sus horarios. Verde = disponible · Ámbar = reservado · Rojo = bloqueado.</p>
+      <div class="cal-wrap">
+        <div class="cal-box">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+            <span class="cal-month" id="cal-month-lbl"></span>
+            <button class="cal-nav-btn" onclick="calNext()">›</button>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <div class="day-panel" id="day-panel">
+          <div style="color:var(--g-mid);font-size:.88rem;text-align:center;padding:32px 0">
+            ← Selecciona un día en el calendario
           </div>
         </div>
       </div>
@@ -1105,7 +1165,7 @@
       document.getElementById(`dtab-${t}`)?.classList.toggle('active', t === tab);
       document.getElementById(`dtab-panel-${t}`)?.classList.toggle('active', t === tab);
     });
-    if (tab === 'config')    loadConfigEditor();
+    if (tab === 'config')    { loadConfigEditor(); if (!_calYear) calInit(); else calRender(); }
     if (tab === 'contenido') loadContentEditor();
   }
 
@@ -1339,6 +1399,164 @@
       else        showDToast('✗ Error al guardar', false);
     } catch { showDToast('✗ Error de conexión', false); }
     btn.disabled = false; btn.textContent = 'Guardar cambios';
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CALENDARIO DE AGENDA
+  ══════════════════════════════════════════════════════════════════════════ */
+  let _calYear, _calMonth, _calSelected = null, _calBookings = {};
+  const DOW_LABELS = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+
+  function calInit() {
+    const now = new Date();
+    _calYear  = now.getFullYear();
+    _calMonth = now.getMonth() + 1;
+    calLoad();
+  }
+
+  async function calLoad() {
+    // Cargar bookings del mes para los badges
+    const res = await fetch(`/api/admin/month-bookings/${_calYear}/${_calMonth}`, { headers: authHeader() });
+    _calBookings = await res.json();
+    calRender();
+    if (_calSelected) loadDayPanel(_calSelected);
+  }
+
+  function calPrev() {
+    _calMonth--;
+    if (_calMonth < 1) { _calMonth = 12; _calYear--; }
+    calLoad();
+  }
+  function calNext() {
+    _calMonth++;
+    if (_calMonth > 12) { _calMonth = 1; _calYear++; }
+    calLoad();
+  }
+
+  function calRender() {
+    const cfg      = _cfg?.schedule;
+    const workdays = cfg?.workdays || [1,2,3,4,5];
+    const lbl      = document.getElementById('cal-month-lbl');
+    const grid     = document.getElementById('cal-grid');
+    if (!lbl || !grid) return;
+
+    const monthName = new Date(_calYear, _calMonth - 1, 1)
+      .toLocaleDateString('es-CL', { month:'long', year:'numeric' });
+    lbl.textContent = monthName;
+
+    // Primer día de la semana (0=Dom → convertir a Lunes=0)
+    const firstDow = (new Date(_calYear, _calMonth - 1, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(_calYear, _calMonth, 0).getDate();
+    const today = new Date().toISOString().split('T')[0];
+
+    let html = DOW_LABELS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+    // Celdas vacías antes del día 1
+    for (let i = 0; i < firstDow; i++) html += `<div class="cal-day cal-empty"></div>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date  = `${_calYear}-${String(_calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dow   = (new Date(_calYear, _calMonth - 1, d).getDay() + 6) % 7; // 0=Lun
+      const isPast    = date < today;
+      const isToday   = date === today;
+      const isWork    = workdays.includes((dow + 1) % 7 === 0 ? 0 : dow + 1) ||
+                        workdays.includes(new Date(_calYear, _calMonth-1, d).getDay());
+      const isSelected = date === _calSelected;
+      const bookCount  = _calBookings[date] || 0;
+
+      // Calcular qué día de la semana es para workdays (usamos getDay: 0=Dom,1=Lun...)
+      const jsDay = new Date(_calYear, _calMonth-1, d).getDay();
+      const isWorkDay = workdays.includes(jsDay);
+
+      let cls = 'cal-day';
+      if (isPast && !isToday)    cls += ' cal-past';
+      else if (!isWorkDay)       cls += ' cal-nonwork';
+      if (isToday)               cls += ' cal-today';
+      if (isSelected)            cls += ' cal-selected';
+
+      const clickable = !isPast || isToday;
+      const onclick   = clickable ? `onclick="calSelectDay('${date}')"` : '';
+      const badge     = bookCount > 0 ? `<span class="cal-badge">${bookCount}</span>` : '';
+
+      html += `<div class="${cls}" ${onclick}>${d}${badge}</div>`;
+    }
+
+    grid.innerHTML = html;
+  }
+
+  async function calSelectDay(date) {
+    _calSelected = date;
+    calRender();
+    loadDayPanel(date);
+  }
+
+  async function loadDayPanel(date) {
+    const panel = document.getElementById('day-panel');
+    if (!panel) return;
+    panel.innerHTML = `<div style="color:var(--g-mid);text-align:center;padding:24px">Cargando…</div>`;
+
+    const res  = await fetch(`/api/admin/schedule/${date}`, { headers: authHeader() });
+    const data = await res.json();
+
+    const [y, m, d] = date.split('-');
+    const dateLabel  = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    const available = data.slots.filter(s => s.status === 'available').length;
+    const booked    = data.slots.filter(s => s.status === 'booked').length;
+    const blocked   = data.slots.filter(s => s.status === 'blocked').length;
+
+    const fullBlockBar = data.fullBlocked
+      ? `<div class="day-fullblock-bar">⛔ Día completo bloqueado — desbloquear en "Fechas bloqueadas"</div>`
+      : '';
+
+    const slotsHTML = data.slots.map(s => {
+      if (s.status === 'booked') {
+        return `<div class="day-slot booked" title="${esc(s.booking.name)} · ${esc(s.booking.service)}">
+          <span class="day-slot-time">${s.time}</span>
+          <span class="day-slot-label">${esc(s.booking.name.split(' ')[0])}</span>
+        </div>`;
+      }
+      if (s.status === 'blocked') {
+        return `<div class="day-slot blocked" onclick="slotUnblock('${date}','${s.time}')" title="Clic para desbloquear">
+          <span class="day-slot-time">${s.time}</span>
+          <span class="day-slot-label">Bloqueado ✕</span>
+        </div>`;
+      }
+      // available
+      return `<div class="day-slot available" onclick="slotBlock('${date}','${s.time}')" title="Clic para bloquear">
+        <span class="day-slot-time">${s.time}</span>
+        <span class="day-slot-label">Disponible</span>
+      </div>`;
+    }).join('');
+
+    panel.innerHTML = `
+      <div class="day-panel-title">${dateLabel}</div>
+      <div class="day-panel-sub">
+        <span style="color:var(--emerald-lt)">●</span> ${available} disponible${available!==1?'s':''}
+        &nbsp;·&nbsp;
+        <span style="color:#fbbf24">●</span> ${booked} reservado${booked!==1?'s':''}
+        ${blocked ? `&nbsp;·&nbsp;<span style="color:#f87171">●</span> ${blocked} bloqueado${blocked!==1?'s':''}` : ''}
+      </div>
+      ${fullBlockBar}
+      <div class="day-slots-grid">${slotsHTML}</div>
+      ${!data.fullBlocked ? `
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:center">
+        <span style="font-size:.75rem;color:var(--g-mid)">Clic en verde para bloquear · Clic en rojo para desbloquear</span>
+      </div>` : ''}`;
+  }
+
+  async function slotBlock(date, time) {
+    await fetch('/api/admin/blocked-slots', { method:'POST', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify({date,time}) });
+    loadDayPanel(date);
+    calLoad();
+    showDToast(`✓ ${time} bloqueado el ${date.split('-').reverse().join('/')}`);
+  }
+
+  async function slotUnblock(date, time) {
+    await fetch(`/api/admin/blocked-slots/${date}/${encodeURIComponent(time)}`, { method:'DELETE', headers: authHeader() });
+    loadDayPanel(date);
+    calLoad();
+    showDToast(`✓ ${time} desbloqueado`);
   }
 
   async function uploadImage(slot, input) {

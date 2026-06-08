@@ -86,7 +86,13 @@ function writeDB(data) { const tmp = DB_FILE+'.tmp'; fs.writeFileSync(tmp, JSON.
 function getBookings() { return readDB().bookings; }
 function updateBooking(id, changes) { const db = readDB(); db.bookings = db.bookings.map(b => b.id===id ? {...b,...changes} : b); writeDB(db); }
 function deleteBooking(id) { const db = readDB(); db.bookings = db.bookings.filter(b => b.id!==id); writeDB(db); }
-function readBlocked() { try { if (!fs.existsSync(BL_FILE)) fs.writeFileSync(BL_FILE, JSON.stringify({ dates:[] })); return JSON.parse(fs.readFileSync(BL_FILE, 'utf8')); } catch { return { dates:[] }; } }
+function readBlocked() {
+  try {
+    if (!fs.existsSync(BL_FILE)) return { dates:[], slots:{} };
+    const d = JSON.parse(fs.readFileSync(BL_FILE, 'utf8'));
+    return { dates: d.dates || [], slots: d.slots || {} };
+  } catch { return { dates:[], slots:{} }; }
+}
 function writeBlocked(data) { fs.writeFileSync(BL_FILE, JSON.stringify(data, null, 2)); }
 
 /* ── Upload de imágenes ───────────────────────────────────────────────────── */
@@ -210,9 +216,10 @@ app.get('/api/slots', slotLimiter, (req, res) => {
   if (dateObj < today || dateObj > maxDate) return res.json(slots.map(t => ({ time: t, available: false })));
 
   // Verificar si está bloqueada completa
-  const blocked = readBlocked().dates;
-  if (blocked.includes(date)) return res.json(slots.map(t => ({ time: t, available: false })));
+  const bl = readBlocked();
+  if (bl.dates.includes(date)) return res.json(slots.map(t => ({ time: t, available: false })));
 
+  const blockedSlots = bl.slots[date] || [];
   const taken = getBookings().filter(b => b.date === date && b.status !== 'cancelado').map(b => b.time);
   const now   = new Date();
 
@@ -220,7 +227,7 @@ app.get('/api/slots', slotLimiter, (req, res) => {
     const [h, min] = t.split(':').map(Number);
     const slotDt   = new Date(y, m-1, d, h, min);
     const hoursLeft = (slotDt - now) / 3_600_000;
-    return { time: t, available: !taken.includes(t) && hoursLeft >= minAdvanceHours };
+    return { time: t, available: !taken.includes(t) && !blockedSlots.includes(t) && hoursLeft >= minAdvanceHours };
   }));
 });
 
@@ -400,6 +407,58 @@ app.put('/api/admin/content', adminLimiter, adminAuth, (req, res) => {
 app.post('/api/admin/upload', adminLimiter, adminAuth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error:'No se recibió imagen' });
   res.json({ ok:true, filename: req.file.filename, path: '/images/' + req.file.filename });
+});
+
+/* ── Vista de agenda por día ──────────────────────────────────────────────── */
+app.get('/api/admin/schedule/:date', adminLimiter, adminAuth, (req, res) => {
+  const { date } = req.params;
+  if (!DATE_RE.test(date)) return res.status(400).json({ error:'Fecha inválida' });
+  const cfg          = readConfig();
+  const bl           = readBlocked();
+  const dayBookings  = getBookings().filter(b => b.date === date && b.status !== 'cancelado');
+  const blockedSlots = bl.slots[date] || [];
+  const fullBlocked  = bl.dates.includes(date);
+
+  const result = cfg.schedule.slots.map(time => {
+    if (fullBlocked) return { time, status:'blocked', fullDay:true };
+    const bk = dayBookings.find(b => b.time === time);
+    if (bk)                        return { time, status:'booked',    booking:{ id:bk.id, name:bk.name, service:bk.service, email:bk.email, phone:bk.phone } };
+    if (blockedSlots.includes(time)) return { time, status:'blocked' };
+    return { time, status:'available' };
+  });
+  res.json({ slots: result, fullBlocked });
+});
+
+/* Vista resumida del mes para el calendario */
+app.get('/api/admin/month-bookings/:year/:month', adminLimiter, adminAuth, (req, res) => {
+  const { year, month } = req.params;
+  const prefix = `${year}-${String(month).padStart(2,'0')}`;
+  const all    = getBookings().filter(b => b.date.startsWith(prefix) && b.status !== 'cancelado');
+  const byDay  = {};
+  all.forEach(b => { byDay[b.date] = (byDay[b.date] || 0) + 1; });
+  res.json(byDay);
+});
+
+/* ── Bloqueo por slot individual ──────────────────────────────────────────── */
+app.post('/api/admin/blocked-slots', adminLimiter, adminAuth, (req, res) => {
+  const { date, time } = req.body;
+  if (!DATE_RE.test(date) || !TIME_RE.test(time)) return res.status(400).json({ error:'Datos inválidos' });
+  const bl = readBlocked();
+  if (!bl.slots[date]) bl.slots[date] = [];
+  if (!bl.slots[date].includes(time)) bl.slots[date].push(time);
+  writeBlocked(bl);
+  res.json({ ok:true });
+});
+
+app.delete('/api/admin/blocked-slots/:date/:time', adminLimiter, adminAuth, (req, res) => {
+  const { date, time } = req.params;
+  const bl = readBlocked();
+  if (bl.slots[date]) {
+    bl.slots[date] = bl.slots[date].filter(t => t !== time);
+    if (!bl.slots[date].length) delete bl.slots[date];
+  }
+  writeBlocked(bl);
+  res.json({ ok:true });
 });
 
 /* ── Calendario ICS ───────────────────────────────────────────────────────── */
