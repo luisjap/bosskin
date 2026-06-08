@@ -1099,11 +1099,16 @@
   });
 
   function openBooking(serviceKey) {
+    console.log('[BOSSKIN] openBooking llamado con:', serviceKey);
     currentService = BK_SERVICES[serviceKey] || BK_SERVICES.asesoria;
-    document.getElementById('bk-title').textContent = currentService.name;
+    console.log('[BOSSKIN] currentService:', currentService);
     var overlay = document.getElementById('bk-overlay');
+    console.log('[BOSSKIN] overlay elemento:', overlay);
+    if (!overlay) { console.error('[BOSSKIN] ERROR: overlay no encontrado'); return; }
+    document.getElementById('bk-title').textContent = currentService.name;
     overlay.classList.add('open');
     overlay.style.display = 'flex';
+    console.log('[BOSSKIN] overlay display:', overlay.style.display, '| classList:', overlay.className);
     document.body.style.overflow = 'hidden';
     const today  = new Date().toISOString().split('T')[0];
     const maxDt  = new Date(); maxDt.setDate(maxDt.getDate() + 60);
