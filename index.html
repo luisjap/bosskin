@@ -474,10 +474,9 @@
     .stars span:nth-child(5) { animation-delay: .72s; }
 
     /* ══ BOOKING MODAL ═══════════════════════════════════════════════════════ */
-    .bk-overlay { position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:1000;background:rgba(0,0,0,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .3s var(--ease); }
-    .bk-overlay.open { opacity:1;pointer-events:auto; }
-    .bk-modal { background:#0e1a12;border:1px solid rgba(26,107,74,.3);border-radius:16px;padding:40px 36px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;position:relative;transform:translateY(24px);transition:transform .35s var(--ease);box-shadow:0 40px 80px rgba(0,0,0,.7); }
-    .bk-overlay.open .bk-modal { transform:translateY(0); }
+    .bk-overlay { position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:1000;background:rgba(0,0,0,.82);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px; }
+    .bk-overlay.open { display:flex; }
+    .bk-modal { background:#0e1a12;border:1px solid rgba(26,107,74,.3);border-radius:16px;padding:40px 36px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 40px 80px rgba(0,0,0,.7); }
     .bk-close { position:absolute;top:14px;right:14px;background:rgba(255,255,255,.07);border:none;color:var(--white);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .2s; }
     .bk-close:hover { background:rgba(255,255,255,.15); }
     .bk-title { font-family:var(--font-t);font-size:1.55rem;font-weight:700;color:var(--white);margin-bottom:5px; }
@@ -1091,16 +1090,20 @@
 
   /* Al volver desde MP con el botón Atrás, el bfcache restaura la página
      con el modal abierto. pageshow lo cierra y limpia el estado. */
-  window.addEventListener('pageshow', (e) => {
+  window.addEventListener('pageshow', function(e) {
     if (!e.persisted) return;
     document.body.style.overflow = '';
-    document.getElementById('bk-overlay').classList.remove('open');
+    var overlay = document.getElementById('bk-overlay');
+    overlay.classList.remove('open');
+    overlay.style.display = 'none';
   });
 
   function openBooking(serviceKey) {
     currentService = BK_SERVICES[serviceKey] || BK_SERVICES.asesoria;
     document.getElementById('bk-title').textContent = currentService.name;
-    document.getElementById('bk-overlay').classList.add('open');
+    var overlay = document.getElementById('bk-overlay');
+    overlay.classList.add('open');
+    overlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     const today  = new Date().toISOString().split('T')[0];
     const maxDt  = new Date(); maxDt.setDate(maxDt.getDate() + 60);
@@ -1120,7 +1123,9 @@
   }
 
   function closeBooking() {
-    document.getElementById('bk-overlay').classList.remove('open');
+    var overlay = document.getElementById('bk-overlay');
+    overlay.classList.remove('open');
+    overlay.style.display = 'none';
     document.body.style.overflow = '';
   }
 
