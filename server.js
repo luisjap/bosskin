@@ -157,20 +157,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 /* ── Middlewares ──────────────────────────────────────────────────────────── */
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:     ["'self'", "'unsafe-inline'"],
-      scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc:     ["'self'", 'data:', 'https:', 'blob:'],
-      connectSrc: ["'self'"],
-      frameSrc:   ['https://www.mercadopago.cl', 'https://www.mercadopago.com', 'https://www.mercadolibre.com'],
-    },
-  },
-}));
+app.use(helmet({ contentSecurityPolicy: false }));
 const ALLOWED = ['https://bosskinlab.com','https://www.bosskinlab.com','http://localhost:3004','http://localhost:3000'];
 app.use(cors({ origin: (origin, cb) => cb(null, !origin || ALLOWED.includes(origin)), methods:['GET','POST','PATCH','PUT','DELETE','OPTIONS'], allowedHeaders:['Content-Type','Authorization'] }));
 app.use(express.json({ limit:'2mb' }));
