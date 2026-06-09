@@ -131,6 +131,107 @@
     .d-tab:hover:not(.active) { background: rgba(255,255,255,.06); color: var(--white); }
     .d-panel { display: none; } .d-panel.active { display: block; }
 
+    /* ══ DESKTOP CRM LAYOUT ══════════════════════════════════════════════ */
+    @media (min-width: 769px) {
+      /* ── CRM Layout Desktop ── */
+      #app.show { display: grid !important; grid-template-rows: 64px 1fr; min-height: 100vh; }
+      .topbar { grid-row: 1; }
+      .crm-body { grid-row: 2; display: grid; grid-template-columns: 228px 1fr; }
+
+      /* Sidebar */
+      .crm-sidebar {
+        background: #090f0c;
+        border-right: 1px solid rgba(255,255,255,.06);
+        display: flex; flex-direction: column;
+        padding: 20px 10px 16px;
+        position: sticky; top: 64px;
+        height: calc(100vh - 64px); overflow-y: auto;
+        scrollbar-width: none;
+      }
+      .crm-sidebar::-webkit-scrollbar { display: none; }
+      .crm-brand { padding: 4px 10px 20px; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: 12px; }
+      .crm-brand-name { font-family: var(--font-t); font-size: 1.15rem; font-weight: 900; color: var(--white); }
+      .crm-brand-tag { font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.25); margin-top: 2px; }
+      .crm-nav { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+      .crm-nav-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 10px; border-radius: 8px;
+        color: rgba(255,255,255,.45); font-family: var(--font-b); font-size: .85rem; font-weight: 500;
+        cursor: pointer; background: none; border: none; text-align: left; width: 100%;
+        text-decoration: none; transition: all .14s; user-select: none;
+      }
+      .crm-nav-item:hover:not(.active) { background: rgba(255,255,255,.05); color: rgba(255,255,255,.75); }
+      .crm-nav-item.active { background: rgba(26,107,74,.15); color: var(--emerald-lt); }
+      .crm-ni-ico {
+        width: 28px; height: 28px; border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(255,255,255,.05); flex-shrink: 0; font-size: .8rem;
+      }
+      .crm-nav-item.active .crm-ni-ico { background: rgba(26,107,74,.2); }
+      .crm-ni-badge { margin-left: auto; background: #fbbf24; color: #000; border-radius: 100px; font-size: .58rem; font-weight: 800; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+      .crm-nav-sep { height: 1px; background: rgba(255,255,255,.06); margin: 6px 4px; }
+
+      /* Sidebar footer */
+      .crm-sidebar-footer { padding-top: 12px; border-top: 1px solid rgba(255,255,255,.06); display: flex; flex-direction: column; gap: 10px; }
+      .crm-user { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .crm-user-av { width: 32px; height: 32px; border-radius: 50%; background: rgba(26,107,74,.3); border: 1px solid rgba(26,107,74,.4); display: flex; align-items: center; justify-content: center; font-family: var(--font-t); font-weight: 700; font-size: .9rem; color: var(--emerald-lt); flex-shrink: 0; }
+      .crm-user-name { font-size: .82rem; font-weight: 600; color: var(--white); }
+      .crm-user-role { font-size: .65rem; color: rgba(255,255,255,.3); letter-spacing: .04em; text-transform: uppercase; }
+      .crm-logout-btn { display: flex; align-items: center; gap: 8px; width: 100%; background: rgba(224,82,82,.07); border: 1px solid rgba(224,82,82,.15); color: #f87171; font-family: var(--font-b); font-size: .8rem; padding: 9px 10px; border-radius: 8px; cursor: pointer; transition: background .14s; }
+      .crm-logout-btn:hover { background: rgba(224,82,82,.14); }
+
+      /* Main content area */
+      main { max-width: none !important; margin: 0 !important; padding: 28px 32px !important; overflow-y: auto; height: calc(100vh - 64px); }
+
+      /* Hide old d-tabs — sidebar replaces them */
+      .d-tabs { display: none !important; }
+
+      /* Topbar simplificado en desktop */
+      .btn-logout { display: none !important; } /* se mueve al sidebar */
+
+      /* ── Stats en dashboard ── */
+      #stats-row { display: grid !important; grid-template-columns: repeat(4,1fr) !important; gap: 16px; margin-bottom: 28px; }
+
+      /* Dashboard panels */
+      .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      .dash-col {}
+      .dash-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+      .dash-section-title { font-family: var(--font-t); font-size: 1rem; font-weight: 700; color: var(--white); }
+      .dash-table-wrap { background: var(--card); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; overflow: hidden; }
+      .dash-mini-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.05); transition: background .1s; }
+      .dash-mini-row:last-child { border: none; }
+      .dash-mini-row:hover { background: rgba(255,255,255,.02); }
+      .dash-mini-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+      .dash-mini-name { font-size: .87rem; font-weight: 500; color: var(--white); flex: 1; }
+      .dash-mini-svc { font-size: .74rem; color: var(--g-mid); margin-top: 2px; }
+      .dash-mini-date { font-size: .78rem; color: var(--emerald-lt); font-weight: 600; white-space: nowrap; text-align: right; }
+      .dash-mini-time { font-size: .72rem; color: var(--g-mid); text-align: right; margin-top: 2px; }
+      .dash-pend-card { background: var(--card); border: 1px solid rgba(245,158,11,.18); border-radius: 12px; padding: 13px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+      .dash-pend-card:last-child { margin-bottom: 0; }
+      .dash-pend-name { font-size: .87rem; font-weight: 500; color: var(--white); flex: 1; }
+      .dash-pend-svc { font-size: .73rem; color: var(--g-mid); margin-top: 2px; }
+      .dash-pend-date { font-size: .76rem; color: #fbbf24; font-weight: 600; text-align: right; white-space: nowrap; }
+      .dash-pend-actions { display: flex; gap: 6px; }
+      .dash-empty { padding: 32px; text-align: center; color: var(--g-mid); font-size: .85rem; background: var(--card); border-radius: 12px; border: 1px solid rgba(255,255,255,.07); }
+      .dash-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .dash-qa-btn {
+        display: flex; align-items: center; gap: 8px;
+        background: var(--card); border: 1px solid rgba(255,255,255,.08);
+        color: rgba(255,255,255,.65); font-family: var(--font-b); font-size: .8rem;
+        padding: 12px 14px; border-radius: 10px; cursor: pointer;
+        text-decoration: none; transition: all .15s;
+      }
+      .dash-qa-btn:hover { background: rgba(255,255,255,.06); color: var(--white); border-color: rgba(255,255,255,.15); }
+
+      /* ── Mejorar topbar desktop ── */
+      .topbar { padding: 0 24px 0 28px !important; }
+      .tb-logo { flex-direction: column !important; }
+
+      /* ── Mejorar tabla ── */
+      thead th { background: rgba(255,255,255,.025) !important; }
+      .td-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    }
+
     /* ── Config cards ── */
     .cfg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; margin-bottom: 32px; }
     .cfg-card { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; overflow: hidden; }
@@ -259,8 +360,11 @@
       /* ── Ocultar elementos desktop ── */
       .table-wrap, .tbar, .block-section, .d-tabs, #stats-row { display: none !important; }
       .m-bottom-nav { display: none !important; }
+      /* Ocultar sidebar y restablecer layout en mobile */
+      .crm-sidebar { display: none !important; }
+      .crm-body { display: block !important; }
       /* App: no forzar altura completa en mobile (los m-tabs están fuera del #app) */
-      #app.show { min-height: 0 !important; padding-bottom: 0; }
+      #app.show { min-height: 0 !important; padding-bottom: 0; display: flex !important; flex-direction: column !important; }
       /* Ocultar main (paneles desktop) en mobile — solo visible en m-panel-mode */
       #app main { display: none; }
       #app main.m-panel-mode { display: block !important; }
@@ -594,6 +698,66 @@
     </div>
   </header>
 
+  <div class="crm-body">
+  <nav class="crm-sidebar" id="crm-sidebar">
+    <div class="crm-brand">
+      <div class="crm-brand-name">BOSSKIN</div>
+      <div class="crm-brand-tag">Admin Panel</div>
+    </div>
+    <nav class="crm-nav">
+      <button class="crm-nav-item active" id="cnav-dashboard" onclick="switchDesktopTab('dashboard')">
+        <span class="crm-ni-ico">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </span>
+        Dashboard
+      </button>
+      <button class="crm-nav-item" id="cnav-reservas" onclick="switchDesktopTab('reservas')">
+        <span class="crm-ni-ico">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        Reservas
+        <span class="crm-ni-badge" id="cnav-badge" style="display:none"></span>
+      </button>
+      <button class="crm-nav-item" id="cnav-agenda" onclick="switchDesktopTab('agenda')">
+        <span class="crm-ni-ico">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </span>
+        Agenda
+      </button>
+      <div class="crm-nav-sep"></div>
+      <button class="crm-nav-item" id="cnav-config" onclick="switchDesktopTab('config')">
+        <span class="crm-ni-ico">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07 10 10 0 0 0 19.07 4.93z"/></svg>
+        </span>
+        Servicios &amp; Horarios
+      </button>
+      <button class="crm-nav-item" id="cnav-contenido" onclick="switchDesktopTab('contenido')">
+        <span class="crm-ni-ico">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </span>
+        Contenido &amp; Imágenes
+      </button>
+      <div class="crm-nav-sep"></div>
+      <a class="crm-nav-item" href="/estrategia.html">
+        <span class="crm-ni-ico">📱</span>
+        Estrategia Social
+      </a>
+    </nav>
+    <div class="crm-sidebar-footer">
+      <div class="crm-user">
+        <div class="crm-user-av">B</div>
+        <div class="crm-user-info">
+          <div class="crm-user-name">BarbiVillalobos</div>
+          <div class="crm-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="crm-logout-btn" onclick="doLogout()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </nav>
+
   <main>
     <!-- Mobile back bar (para paneles desktop en mobile) -->
     <div class="m-panel-back" id="m-panel-back-bar">
@@ -614,8 +778,52 @@
 
     <div class="stats" id="stats-row"></div>
 
+    <!-- Panel: Dashboard -->
+    <div class="d-panel active" id="dtab-panel-dashboard">
+      <!-- Stats ya las renderiza renderStats() en #stats-row — aquí solo el resto -->
+      <div class="dash-grid">
+        <!-- Columna izquierda: Próximas reservas -->
+        <div class="dash-col">
+          <div class="dash-section-head">
+            <div class="dash-section-title">Próximas reservas confirmadas</div>
+            <button class="btn-sm" onclick="switchDesktopTab('reservas')">Ver todas →</button>
+          </div>
+          <div class="dash-table-wrap" id="dash-upcoming"></div>
+        </div>
+        <!-- Columna derecha: Pendientes + acciones rápidas -->
+        <div class="dash-col">
+          <div class="dash-section-head" style="margin-bottom:12px">
+            <div class="dash-section-title">Pendientes de confirmación</div>
+            <span class="badge-pend" id="dash-pend-count"></span>
+          </div>
+          <div id="dash-pending"></div>
+          <div style="margin-top:24px">
+            <div class="dash-section-title" style="margin-bottom:12px">Acciones rápidas</div>
+            <div class="dash-quick-actions">
+              <a href="/" target="_blank" class="dash-qa-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Ver sitio web
+              </a>
+              <button class="dash-qa-btn" onclick="exportCSV()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Exportar CSV
+              </button>
+              <button class="dash-qa-btn" onclick="switchDesktopTab('agenda')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                Gestionar agenda
+              </button>
+              <a href="/estrategia.html" class="dash-qa-btn">
+                <span style="font-size:.85rem">📱</span>
+                Estrategia Social
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /panel dashboard -->
+
     <!-- Panel: Reservas -->
-    <div class="d-panel active" id="dtab-panel-reservas">
+    <div class="d-panel" id="dtab-panel-reservas">
     <div class="tbar">
       <span class="tbar-title">Reservas</span>
       <input class="filter-inp" type="date" id="filter-date" onchange="renderTable()" title="Filtrar por fecha">
@@ -830,6 +1038,7 @@
     </div><!-- /panel contenido -->
 
   </main>
+  </div><!-- /crm-body -->
   <div id="d-toast"></div>
 </div>
 
@@ -1153,6 +1362,8 @@
       renderStats();
       renderTable();
       renderBlocked();
+      renderDashboard();
+      switchDesktopTab('dashboard');
     }
     initMobile(); // Si es mobile, llama switchMTab('home') → renderMobileHome()
   }
@@ -1722,18 +1933,92 @@
      DESKTOP TABS
   ══════════════════════════════════════════════════════════════════════════ */
   function switchDesktopTab(tab) {
-    ['reservas','agenda','config','contenido'].forEach(t => {
-      document.getElementById(`dtab-${t}`)?.classList.toggle('active', t === tab);
-      document.getElementById(`dtab-panel-${t}`)?.classList.toggle('active', t === tab);
+    ['reservas','agenda','config','contenido','dashboard'].forEach(t => {
+      const panel = document.getElementById(`dtab-panel-${t}`);
+      const dTab  = document.getElementById(`dtab-${t}`);  // viejo, puede no existir
+      const cNav  = document.getElementById(`cnav-${t}`);
+      if (panel) panel.classList.toggle('active', t === tab);
+      if (dTab)  dTab.classList.toggle('active', t === tab);
+      if (cNav)  cNav.classList.toggle('active', t === tab);
     });
-    if (tab === 'agenda') {
+    if (tab === 'reservas') renderTable();
+    if (tab === 'config')   loadConfigEditor();
+    if (tab === 'contenido') loadContentEditor();
+    if (tab === 'agenda')   {
       loadConfigEditor().then(() => {
         if (!_calYear) calInit(); else calRender();
         renderOpenUntilStatus();
       });
     }
-    if (tab === 'config') loadConfigEditor();
-    if (tab === 'contenido') loadContentEditor();
+    if (tab === 'dashboard') renderDashboard();
+  }
+
+  async function renderDashboard() {
+    renderStats();
+    const bookings = await apiFetch('/api/admin/bookings', {}).then(r => r.json());
+    const today    = new Date().toISOString().split('T')[0];
+    const pending  = bookings.filter(b => b.status === 'pendiente');
+    const upcoming = bookings
+      .filter(b => b.status === 'confirmado' && b.date >= today)
+      .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time))
+      .slice(0, 6);
+
+    // Actualizar badge sidebar
+    const badge = document.getElementById('cnav-badge');
+    if (badge) {
+      if (pending.length) { badge.textContent = pending.length > 9 ? '9+' : pending.length; badge.style.display = 'flex'; }
+      else badge.style.display = 'none';
+    }
+
+    // Próximas confirmadas
+    const upcomingEl = document.getElementById('dash-upcoming');
+    if (upcomingEl) {
+      if (!upcoming.length) {
+        upcomingEl.innerHTML = '<div class="dash-empty">Sin reservas confirmadas próximas</div>';
+      } else {
+        upcomingEl.innerHTML = `<div class="dash-table-wrap">${upcoming.map(b => {
+          const d = new Date(b.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short' });
+          const isToday = b.date === today;
+          return `<div class="dash-mini-row">
+            <div class="dash-mini-dot" style="background:${isToday?'#22c55e':'#1A6B4A'}"></div>
+            <div style="flex:1">
+              <div class="dash-mini-name">${esc(b.name)}</div>
+              <div class="dash-mini-svc">${esc(b.service)}</div>
+            </div>
+            <div>
+              <div class="dash-mini-date">${isToday ? '🟢 Hoy' : d}</div>
+              <div class="dash-mini-time">${b.time} hrs</div>
+            </div>
+          </div>`;
+        }).join('')}</div>`;
+      }
+    }
+
+    // Pendientes
+    const pendEl   = document.getElementById('dash-pending');
+    const countEl  = document.getElementById('dash-pend-count');
+    if (countEl) countEl.textContent = pending.length ? `${pending.length} sin confirmar` : '';
+    if (pendEl) {
+      if (!pending.length) {
+        pendEl.innerHTML = '<div class="dash-empty">✓ Sin pendientes</div>';
+      } else {
+        pendEl.innerHTML = pending.slice(0,4).map(b => {
+          const d = new Date(b.date+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+          return `<div class="dash-pend-card">
+            <div style="flex:1">
+              <div class="dash-pend-name">${esc(b.name)}</div>
+              <div class="dash-pend-svc">${esc(b.service)}</div>
+            </div>
+            <div>
+              <div class="dash-pend-date">${d} · ${b.time}</div>
+              <div class="dash-pend-actions">
+                <button class="btn-confirm" onclick="confirmPayment('${b.id}','${esc(b.name)}','${b.date}','${b.time}')">Confirmar</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
   }
 
   function showDToast(msg, ok = true) {
