@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Estrategia Social — BOSSKIN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black:      #0D0D0D;
+      --card:       #111611;
+      --emerald:    #1A6B4A;
+      --emerald-lt: #D4EDE3;
+      --white:      #FFFFFF;
+      --g-mid:      #7A7A7A;
+      --g-light:    #C4C4C4;
+      --font-t:     'Playfair Display', serif;
+      --font-b:     'DM Sans', sans-serif;
+      --ease:       cubic-bezier(.22,1,.36,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-b); background: var(--black); color: var(--white); line-height: 1.65; min-height: 100vh; }
+
+    /* ── Header ── */
+    .header {
+      background: rgba(13,13,13,.95); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      padding: calc(env(safe-area-inset-top) + 14px) 20px 14px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-back { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: var(--white); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; flex-shrink: 0; }
+    .header-title { font-family: var(--font-t); font-size: 1.1rem; font-weight: 900; }
+    .header-sub { font-size: .65rem; color: rgba(255,255,255,.35); letter-spacing: .08em; text-transform: uppercase; margin-top: 1px; }
+    .header-badge { margin-left: auto; background: rgba(26,107,74,.15); border: 1px solid rgba(26,107,74,.3); color: var(--emerald-lt); font-size: .65rem; font-weight: 600; padding: 4px 10px; border-radius: 100px; letter-spacing: .06em; flex-shrink: 0; }
+
+    /* ── Tabs ── */
+    .tabs-wrap { background: var(--black); border-bottom: 1px solid rgba(255,255,255,.07); overflow-x: auto; scrollbar-width: none; position: sticky; top: 65px; z-index: 40; }
+    .tabs-wrap::-webkit-scrollbar { display: none; }
+    .tabs { display: flex; padding: 0 16px; gap: 2px; }
+    .tab-btn {
+      background: none; border: none; color: rgba(255,255,255,.4);
+      font-family: var(--font-b); font-size: .8rem; font-weight: 500;
+      padding: 13px 14px; white-space: nowrap; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all .15s;
+    }
+    .tab-btn.active { color: var(--emerald-lt); border-color: var(--emerald); }
+    .tab-btn:hover:not(.active) { color: rgba(255,255,255,.7); }
+
+    /* ── Content ── */
+    .content { padding: 24px 16px 60px; max-width: 800px; margin: 0 auto; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Cards ── */
+    .card { background: var(--card); border: 1px solid rgba(255,255,255,.07); border-radius: 14px; margin-bottom: 14px; overflow: hidden; }
+    .card-head { padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; gap: 10px; }
+    .card-ico { font-size: 1.1rem; flex-shrink: 0; }
+    .card-title { font-family: var(--font-t); font-size: 1rem; font-weight: 700; }
+    .card-sub { font-size: .72rem; color: var(--g-mid); margin-top: 2px; }
+    .card-body { padding: 16px 18px; }
+    .card-body p { font-size: .88rem; color: rgba(255,255,255,.7); line-height: 1.7; margin-bottom: 10px; }
+    .card-body p:last-child { margin-bottom: 0; }
+
+    /* ── Section title ── */
+    .s-title { font-family: var(--font-t); font-size: 1.3rem; font-weight: 900; margin-bottom: 6px; }
+    .s-sub { font-size: .84rem; color: var(--g-mid); margin-bottom: 22px; line-height: 1.6; }
+    .label-tag { display: inline-block; font-size: .6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); background: rgba(26,107,74,.1); border: 1px solid rgba(26,107,74,.2); padding: 3px 9px; border-radius: 100px; margin-bottom: 10px; }
+
+    /* ── Pillar cards ── */
+    .pillar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    @media (max-width: 500px) { .pillar-grid { grid-template-columns: 1fr; } }
+    .pillar-card { background: var(--card); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 15px; }
+    .pillar-pct { font-family: var(--font-t); font-size: 1.6rem; font-weight: 900; color: var(--emerald-lt); line-height: 1; margin-bottom: 4px; }
+    .pillar-name { font-size: .85rem; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+    .pillar-desc { font-size: .72rem; color: var(--g-mid); line-height: 1.5; }
+    .pillar-card.highlight { border-color: rgba(26,107,74,.3); background: linear-gradient(135deg,#0e1a11,#152e1a); }
+
+    /* ── Timeline ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item { display: flex; gap: 14px; padding-bottom: 24px; position: relative; }
+    .tl-item:last-child { padding-bottom: 0; }
+    .tl-dot { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; border: 2px solid; margin-top: 2px; }
+    .tl-line { position: absolute; left: 16px; top: 36px; bottom: 0; width: 2px; background: rgba(255,255,255,.08); }
+    .tl-item:last-child .tl-line { display: none; }
+    .tl-body { flex: 1; }
+    .tl-period { font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px; }
+    .tl-title { font-weight: 600; font-size: .9rem; color: var(--white); margin-bottom: 4px; }
+    .tl-desc { font-size: .8rem; color: rgba(255,255,255,.55); line-height: 1.6; }
+
+    /* ── Calendar grid ── */
+    .cal-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .cal-table th { background: rgba(26,107,74,.1); color: var(--emerald-lt); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; }
+    .cal-table td { padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.04); color: rgba(255,255,255,.75); vertical-align: top; line-height: 1.5; }
+    .cal-table tr:last-child td { border-bottom: none; }
+    .cal-table tr:hover td { background: rgba(255,255,255,.02); }
+    .cal-day-name { font-weight: 600; color: var(--white); white-space: nowrap; }
+    .tag-tt { display: inline-block; background: rgba(0,0,0,.3); border: 1px solid rgba(255,50,50,.25); color: #ff6b6b; font-size: .65rem; padding: 2px 6px; border-radius: 4px; margin-bottom: 3px; }
+    .tag-ig { display: inline-block; background: rgba(0,0,0,.3); border: 1px solid rgba(180,80,220,.25); color: #c77dff; font-size: .65rem; padding: 2px 6px; border-radius: 4px; margin-bottom: 3px; }
+    .tag-em { display: inline-block; background: rgba(26,107,74,.15); border: 1px solid rgba(26,107,74,.3); color: var(--emerald-lt); font-size: .65rem; padding: 2px 6px; border-radius: 4px; margin-bottom: 3px; }
+
+    /* ── Accordion (scripts/ideas) ── */
+    .acc-item { border-bottom: 1px solid rgba(255,255,255,.07); }
+    .acc-item:first-child { border-top: 1px solid rgba(255,255,255,.07); }
+    .acc-btn { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: none; color: var(--white); font-family: var(--font-b); font-size: .88rem; font-weight: 500; padding: 15px 0; cursor: pointer; text-align: left; }
+    .acc-btn:hover { color: var(--emerald-lt); }
+    .acc-ico { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: .8rem; flex-shrink: 0; }
+    .acc-arrow { margin-left: auto; color: rgba(255,255,255,.25); transition: transform .2s; flex-shrink: 0; }
+    .acc-item.open .acc-arrow { transform: rotate(180deg); }
+    .acc-body { max-height: 0; overflow: hidden; transition: max-height .3s var(--ease); }
+    .acc-item.open .acc-body { max-height: 600px; }
+    .acc-content { padding: 0 0 18px 40px; }
+    .acc-content p { font-size: .83rem; color: rgba(255,255,255,.65); line-height: 1.7; margin-bottom: 8px; }
+    .script-box { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+    .script-label { font-size: .62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); margin-bottom: 8px; }
+    .script-text { font-size: .82rem; color: rgba(255,255,255,.8); line-height: 1.75; font-style: italic; }
+    .script-note { font-size: .72rem; color: var(--g-mid); margin-top: 8px; }
+
+    /* ── KPI cards ── */
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+    .kpi-card { background: var(--card); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 15px; }
+    .kpi-platform { font-size: .62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+    .kpi-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .kpi-row:last-child { border: none; }
+    .kpi-name { font-size: .78rem; color: rgba(255,255,255,.6); }
+    .kpi-target { font-size: .78rem; font-weight: 600; color: var(--emerald-lt); }
+
+    /* ── Checklist ── */
+    .checklist { display: flex; flex-direction: column; gap: 8px; }
+    .check-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: var(--card); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 11px; padding: 13px 15px; cursor: pointer;
+      transition: all .15s; user-select: none;
+    }
+    .check-item:active { transform: scale(.98); }
+    .check-item.done { opacity: .5; border-color: rgba(26,107,74,.2); background: rgba(26,107,74,.04); }
+    .check-box { width: 20px; height: 20px; border-radius: 6px; border: 2px solid rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: all .15s; }
+    .check-item.done .check-box { background: var(--emerald); border-color: var(--emerald); }
+    .check-tick { display: none; }
+    .check-item.done .check-tick { display: block; }
+    .check-txt { flex: 1; }
+    .check-title { font-size: .88rem; font-weight: 500; color: var(--white); line-height: 1.4; }
+    .check-item.done .check-title { text-decoration: line-through; color: var(--g-mid); }
+    .check-detail { font-size: .74rem; color: var(--g-mid); margin-top: 3px; line-height: 1.5; }
+    .check-week { font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--emerald); margin-bottom: 8px; margin-top: 16px; }
+    .check-week:first-child { margin-top: 0; }
+    .progress-bar-wrap { background: rgba(255,255,255,.06); border-radius: 100px; height: 6px; margin-bottom: 20px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: var(--emerald); border-radius: 100px; transition: width .4s var(--ease); }
+    .progress-label { font-size: .75rem; color: var(--g-mid); margin-bottom: 8px; display: flex; justify-content: space-between; }
+
+    /* ── Hooks box ── */
+    .hooks-list { display: flex; flex-direction: column; gap: 7px; }
+    .hook-item { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 9px; padding: 11px 14px; font-size: .83rem; color: rgba(255,255,255,.8); line-height: 1.5; cursor: pointer; transition: all .12s; }
+    .hook-item:active { background: rgba(26,107,74,.1); border-color: rgba(26,107,74,.3); }
+    .hook-copy { float: right; font-size: .65rem; color: var(--emerald); font-weight: 600; margin-left: 8px; }
+
+    /* ── Funnel visual ── */
+    .funnel { display: flex; flex-direction: column; align-items: center; gap: 0; }
+    .funnel-step { width: 100%; max-width: 400px; text-align: center; padding: 14px 20px; border-radius: 10px; margin-bottom: 2px; }
+    .funnel-arrow { color: rgba(255,255,255,.2); font-size: 1.2rem; margin: 2px 0; }
+    .funnel-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 3px; }
+    .funnel-val { font-size: .82rem; color: rgba(255,255,255,.6); }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #111; border: 1px solid rgba(26,107,74,.4); color: var(--emerald-lt); font-family: var(--font-b); font-size: .82rem; padding: 10px 18px; border-radius: 100px; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Stat chips ── */
+    .stat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .stat-chip { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09); border-radius: 8px; padding: 8px 12px; }
+    .stat-chip-val { font-family: var(--font-t); font-size: 1.2rem; font-weight: 900; color: var(--emerald-lt); line-height: 1; }
+    .stat-chip-lbl { font-size: .65rem; color: var(--g-mid); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <a href="/admin.html" class="header-back" title="Volver al admin">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </a>
+  <div>
+    <div class="header-title">Estrategia Social</div>
+    <div class="header-sub">BOSSKIN · Community Manager</div>
+  </div>
+  <div class="header-badge">📱 Plan activo</div>
+</header>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">Resumen</button>
+    <button class="tab-btn" onclick="switchTab('pilares')">Pilares</button>
+    <button class="tab-btn" onclick="switchTab('calendario')">Calendario</button>
+    <button class="tab-btn" onclick="switchTab('scripts')">Scripts</button>
+    <button class="tab-btn" onclick="switchTab('kpis')">KPIs</button>
+    <button class="tab-btn" onclick="switchTab('checklist')">Checklist</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ══ TAB: RESUMEN ══════════════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-overview">
+
+    <div class="label-tag">Visión general</div>
+    <div class="s-title">Plan de contenido BOSSKIN</div>
+    <div class="s-sub">Todo lo que necesitas saber para convertir tus 76k seguidores en clientas que pagan. Canal principal: TikTok. Canal de cierre: Instagram.</div>
+
+    <div class="stat-chips" style="margin-bottom:22px">
+      <div class="stat-chip"><div class="stat-chip-val">76k</div><div class="stat-chip-lbl">Seguidores TikTok</div></div>
+      <div class="stat-chip"><div class="stat-chip-val">5/sem</div><div class="stat-chip-lbl">Videos mínimos</div></div>
+      <div class="stat-chip"><div class="stat-chip-val">3–6m</div><div class="stat-chip-lbl">Para resultados sólidos</div></div>
+      <div class="stat-chip"><div class="stat-chip-val">48h</div><div class="stat-chip-lbl">Ciclo vid → reserva</div></div>
+    </div>
+
+    <!-- Funnel -->
+    <div class="card">
+      <div class="card-head"><span class="card-ico">🔄</span><div><div class="card-title">Embudo de conversión</div><div class="card-sub">Del video a la reserva pagada</div></div></div>
+      <div class="card-body">
+        <div class="funnel">
+          <div class="funnel-step" style="background:rgba(255,50,50,.08);border:1px solid rgba(255,50,50,.15)"><div class="funnel-label" style="color:#ff6b6b">TikTok / Reel</div><div class="funnel-val">Video educativo, análisis o caso real</div></div>
+          <div class="funnel-arrow">↓</div>
+          <div class="funnel-step" style="background:rgba(180,80,220,.07);border:1px solid rgba(180,80,220,.15)"><div class="funnel-label" style="color:#c77dff">Perfil + Bio</div><div class="funnel-val">Link directo en bio → bosskinlab.com/?agendar</div></div>
+          <div class="funnel-arrow">↓</div>
+          <div class="funnel-step" style="background:rgba(26,107,74,.1);border:1px solid rgba(26,107,74,.25)"><div class="funnel-label" style="color:var(--emerald-lt)">Página de reserva</div><div class="funnel-val">Modal con servicio preseleccionado + pago</div></div>
+          <div class="funnel-arrow">↓</div>
+          <div class="funnel-step" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2)"><div class="funnel-label" style="color:#fbbf24">Clienta confirmada</div><div class="funnel-val">Email de confirmación + WhatsApp</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="card">
+      <div class="card-head"><span class="card-ico">📅</span><div><div class="card-title">Timeline de resultados</div><div class="card-sub">Qué esperar mes a mes</div></div></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-line"></div>
+            <div class="tl-dot" style="background:rgba(26,107,74,.15);border-color:rgba(26,107,74,.4);color:var(--emerald-lt)">1</div>
+            <div class="tl-body">
+              <div class="tl-period" style="color:var(--emerald)">Semana 1–2</div>
+              <div class="tl-title">Setup y batch recording</div>
+              <div class="tl-desc">Optimizar bios, grabar 10 videos en un solo día, programar publicaciones.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-line"></div>
+            <div class="tl-dot" style="background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.35);color:#93c5fd">2</div>
+            <div class="tl-body">
+              <div class="tl-period" style="color:#93c5fd">Mes 1</div>
+              <div class="tl-title">Activación del algoritmo</div>
+              <div class="tl-desc">20+ videos publicados, primeras 2–5 clientas desde redes, datos de qué formatos funcionan mejor.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-line"></div>
+            <div class="tl-dot" style="background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.35);color:#c4b5fd">3</div>
+            <div class="tl-body">
+              <div class="tl-period" style="color:#c4b5fd">Mes 2–3</div>
+              <div class="tl-title">Crecimiento consistente</div>
+              <div class="tl-desc">5–10 clientas/mes desde redes, crecimiento de seguidores, primer video con potencial viral.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35);color:#fbbf24">4</div>
+            <div class="tl-body">
+              <div class="tl-period" style="color:#fbbf24">Mes 4–6</div>
+              <div class="tl-title">Flujo estable + posible lista de espera</div>
+              <div class="tl-desc">Con 76k seguidores activos y un video que viralice, la agenda puede llenarse por semanas.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio optimizada -->
+    <div class="card">
+      <div class="card-head"><span class="card-ico">✍️</span><div><div class="card-title">Bio optimizada para TikTok e Instagram</div><div class="card-sub">Cópiala y pégala directamente</div></div></div>
+      <div class="card-body">
+        <div class="script-box">
+          <div class="script-label">TikTok</div>
+          <div class="script-text">Barbara Villalobos · Cosmetóloga 🌿<br>Skincare con base científica<br>Consultas online 🌎<br>👇 Agenda tu asesoría</div>
+        </div>
+        <div class="script-box">
+          <div class="script-label">Instagram</div>
+          <div class="script-text">Barbara Villalobos · Cosmetóloga 🌿<br>Skincare sin rodeos, con ciencia real ✨<br>+500 pieles transformadas<br>📩 Consultas online disponibles<br>👇 Agenda aquí</div>
+        </div>
+        <div class="script-note">El link de bio debe apuntar a: <strong>bosskinlab.com/?agendar</strong></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB: PILARES ══════════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-pilares">
+
+    <div class="label-tag">Estrategia de contenido</div>
+    <div class="s-title">Los 5 pilares de contenido</div>
+    <div class="s-sub">Cada video o post debe pertenecer a uno de estos pilares. Esto mantiene el perfil consistente y predecible para el algoritmo.</div>
+
+    <div class="pillar-grid">
+      <div class="pillar-card highlight">
+        <div class="pillar-pct">35%</div>
+        <div class="pillar-name">Educación de piel</div>
+        <div class="pillar-desc">Tipos de piel, ingredientes, mitos vs. realidad. Genera autoridad y shares masivos.</div>
+      </div>
+      <div class="pillar-card highlight">
+        <div class="pillar-pct">25%</div>
+        <div class="pillar-name">Análisis de productos</div>
+        <div class="pillar-desc">Reviews de productos populares (CeraVe, The Ordinary, etc). Alto potencial viral.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-pct">20%</div>
+        <div class="pillar-name">Transformaciones</div>
+        <div class="pillar-desc">Antes/después de clientas reales. Es el contenido que más directamente genera reservas.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-pct">15%</div>
+        <div class="pillar-name">Rutinas personalizadas</div>
+        <div class="pillar-desc">Morning/night routine para cada tipo de piel. CTA directo a la asesoría al final.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body" style="padding:14px 18px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="font-size:1.3rem">🎬</div>
+          <div>
+            <div style="font-weight:600;font-size:.88rem;margin-bottom:4px">5% — Behind the scenes / Personal</div>
+            <div style="font-size:.78rem;color:var(--g-mid);line-height:1.6">Muestra el proceso real de una consulta, tu espacio de trabajo, un día en tu vida como cosmetóloga. Humaniza la marca y genera conexión emocional con la audiencia.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formatos -->
+    <div style="margin-top:24px">
+      <div class="label-tag">Formatos que convierten</div>
+      <div class="s-title" style="font-size:1.1rem">Top 6 formatos para TikTok</div>
+    </div>
+
+    <div class="acc-item" id="fmt1">
+      <button class="acc-btn" onclick="toggleAcc('fmt1')">
+        <div class="acc-ico" style="background:rgba(255,50,50,.1)">🔬</div>
+        Análisis de ingredientes
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <p>Toma un producto popular y analiza sus ingredientes. La gente comparte porque quiere saber si lo que usa sirve o no. <strong>Alto potencial viral.</strong></p>
+        <div class="script-box"><div class="script-label">Ejemplo de formato</div><div class="script-text">"Rating honesto del sérum de The Ordinary que todo el mundo usa — te digo si vale la pena según tu tipo de piel"</div></div>
+        <div class="script-note">💡 Siempre terminar con CTA: "¿Quieres que revise tu rutina completa? Link en bio"</div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="fmt2">
+      <button class="acc-btn" onclick="toggleAcc('fmt2')">
+        <div class="acc-ico" style="background:rgba(26,107,74,.15)">👤</div>
+        "Para mi clienta con piel X"
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <p>Simulas (o muestras) el análisis de una clienta real. Quien tiene ese tipo de piel se identifica inmediatamente. <strong>Conversión directa más alta de todos los formatos.</strong></p>
+        <div class="script-box"><div class="script-label">Ejemplo</div><div class="script-text">"POV: eres mi clienta y me dices que tienes piel grasa con puntos negros... esto es lo primero que te diría"</div></div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="fmt3">
+      <button class="acc-btn" onclick="toggleAcc('fmt3')">
+        <div class="acc-ico" style="background:rgba(245,158,11,.1)">❌✅</div>
+        Mito vs. Realidad
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <p>Destruye un mito popular de skincare con evidencia científica. Las personas lo comparten porque quieren "corregir" a sus amigas. <strong>Shares muy altos.</strong></p>
+        <div class="script-box"><div class="script-label">Ideas de mitos</div><div class="script-text">· "El sol seca el acné" → FALSO<br>· "Si te pica es porque funciona" → FALSO<br>· "La piel grasa no necesita hidratante" → FALSO<br>· "El agua micelar limpia suficiente" → DEPENDE</div></div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="fmt4">
+      <button class="acc-btn" onclick="toggleAcc('fmt4')">
+        <div class="acc-ico" style="background:rgba(168,85,247,.1)">💬</div>
+        Respuesta a comentario
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <p>Alguien deja un comentario preguntando algo sobre su piel → respondes con un video. TikTok prioriza este formato. <strong>Crea un loop de engagement.</strong></p>
+        <div class="script-note">💡 Tip: Si no hay preguntas orgánicas, puedes crear una cuenta secundaria y dejar el comentario tú misma como "cliente anónima".</div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="fmt5">
+      <button class="acc-btn" onclick="toggleAcc('fmt5')">
+        <div class="acc-ico" style="background:rgba(16,185,129,.1)">📸</div>
+        Antes / Después real
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <p>Con permiso de la clienta, muestra la transformación de su piel. <strong>El formato que más reservas genera directamente.</strong> Una sola foto real vale más que 10 videos educativos.</p>
+        <div class="script-note">💡 Siempre pedir autorización por escrito (un mensaje de WhatsApp ya es suficiente). Ocultar el rostro si la clienta lo prefiere.</div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="fmt6">
+      <button class="acc-btn" onclick="toggleAcc('fmt6')">
+        <div class="acc-ico" style="background:rgba(59,130,246,.1)">🌙</div>
+        Rutina paso a paso
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <p>Muestra una rutina de skincare completa (mañana o noche) adaptada a un tipo de piel específico. Al final: "¿Quieres tu rutina personalizada? Link en bio".</p>
+        <div class="script-box"><div class="script-label">Tipos de rutina que generan más views</div><div class="script-text">· Rutina anti-acné económica (bajo $30.000 CLP)<br>· Rutina para piel sensible reactiva<br>· Rutina anti-manchas paso a paso<br>· Rutina mínima para empezar desde cero</div></div>
+      </div></div>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB: CALENDARIO ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-calendario">
+
+    <div class="label-tag">Planificación semanal</div>
+    <div class="s-title">Calendario de contenido</div>
+    <div class="s-sub">Distribuye los pilares durante la semana. No todos los días necesitan el mismo esfuerzo — el batch recording (grabar 10 videos en un día) lo hace sostenible.</div>
+
+    <!-- Horarios -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-head"><span class="card-ico">⏰</span><div><div class="card-title">Mejores horarios para publicar</div><div class="card-sub">Hora de Santiago — ajustar según tu audiencia principal</div></div></div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="background:rgba(255,50,50,.08);border:1px solid rgba(255,50,50,.15);border-radius:9px;padding:10px 14px;text-align:center">
+            <div style="font-weight:700;color:#ff6b6b;font-size:.95rem">7–9 AM</div>
+            <div style="font-size:.72rem;color:var(--g-mid);margin-top:2px">Rutina matutina</div>
+          </div>
+          <div style="background:rgba(26,107,74,.1);border:1px solid rgba(26,107,74,.25);border-radius:9px;padding:10px 14px;text-align:center">
+            <div style="font-weight:700;color:var(--emerald-lt);font-size:.95rem">12–2 PM</div>
+            <div style="font-size:.72rem;color:var(--g-mid);margin-top:2px">Pausa del mediodía</div>
+          </div>
+          <div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:9px;padding:10px 14px;text-align:center">
+            <div style="font-weight:700;color:#c4b5fd;font-size:.95rem">7–10 PM</div>
+            <div style="font-size:.72rem;color:var(--g-mid);margin-top:2px">Prime time 🔥</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="overflow:auto">
+      <div class="card-head"><span class="card-ico">📆</span><div><div class="card-title">Distribución semanal</div></div></div>
+      <table class="cal-table">
+        <thead>
+          <tr>
+            <th>Día</th>
+            <th>TikTok</th>
+            <th>Instagram</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="cal-day-name">Lunes</span></td>
+            <td><span class="tag-tt">TT</span><br>Análisis de ingredientes<br><span style="font-size:.7rem;color:var(--g-mid)">Pilar: Análisis de productos</span></td>
+            <td><span class="tag-ig">IG</span><br>Carrusel educativo (feed)<br><span style="font-size:.7rem;color:var(--g-mid)">5–7 slides con tips</span></td>
+          </tr>
+          <tr>
+            <td><span class="cal-day-name">Martes</span></td>
+            <td><span class="tag-tt">TT</span><br>Mito vs. Realidad<br><span style="font-size:.7rem;color:var(--g-mid)">Pilar: Educación de piel</span></td>
+            <td><span class="tag-ig">IG</span><br>Story: Poll tipo de piel<br><span style="font-size:.7rem;color:var(--g-mid)">"¿Cuál es tu mayor problema de piel?"</span></td>
+          </tr>
+          <tr>
+            <td><span class="cal-day-name">Miércoles</span></td>
+            <td><span class="tag-tt">TT</span><br>"Para mi clienta con piel X"<br><span style="font-size:.7rem;color:var(--g-mid)">CTA a agendar</span></td>
+            <td><span class="tag-ig">IG</span><br>Reel (mismo video TikTok)<br><span style="font-size:.7rem;color:var(--g-mid)">Descargar sin watermark</span></td>
+          </tr>
+          <tr>
+            <td><span class="cal-day-name">Jueves</span></td>
+            <td><span class="tag-tt">TT</span><br>Respuesta a comentario<br><span style="font-size:.7rem;color:var(--g-mid)">Pilar: Educación</span></td>
+            <td><span class="tag-ig">IG</span><br>Story: Testimonio o resultado<br><span style="font-size:.7rem;color:var(--g-mid)">Screenshot de clienta satisfecha</span></td>
+          </tr>
+          <tr>
+            <td><span class="cal-day-name">Viernes</span></td>
+            <td><span class="tag-tt">TT</span><br>Antes/después o rutina<br><span style="font-size:.7rem;color:var(--g-mid)">Pilar: Transformaciones</span></td>
+            <td><span class="tag-ig">IG</span><br>Story: "Agenda para la próxima semana"<br><span style="font-size:.7rem;color:var(--g-mid)">Link sticker directo</span></td>
+          </tr>
+          <tr>
+            <td><span class="cal-day-name">Sábado</span></td>
+            <td><span class="tag-em">Opcional</span><br>BTS o contenido personal<br><span style="font-size:.7rem;color:var(--g-mid)">Más relajado, humano</span></td>
+            <td><span class="tag-ig">IG</span><br>Story casual o Q&A<br><span style="font-size:.7rem;color:var(--g-mid)">"Pregúntame sobre tu piel"</span></td>
+          </tr>
+          <tr>
+            <td><span class="cal-day-name">Domingo</span></td>
+            <td>—</td>
+            <td><span class="tag-ig">IG</span><br>Story: horarios disponibles semana<br><span style="font-size:.7rem;color:var(--g-mid)">+ link a agenda</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-ico">🎬</span><div><div class="card-title">Batch recording</div><div class="card-sub">La forma sostenible de publicar todos los días</div></div></div>
+      <div class="card-body">
+        <p>En lugar de grabar un video por día, <strong>graba 10 videos en un solo bloque de 2–3 horas</strong>. Misma ropa, mismo fondo, distintos temas. Se publican uno por día durante dos semanas.</p>
+        <p>Este es el secreto de los creadores que publican consistentemente sin agotarse. Planifica los temas el domingo, graba el lunes, programa el martes.</p>
+        <div class="script-box"><div class="script-label">Tip de producción</div><div class="script-text">Anota los 10 temas en papel antes de grabar. Graba todo de un tirón. El primer video siempre es el más difícil — después fluye solo.</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB: SCRIPTS ══════════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-scripts">
+
+    <div class="label-tag">Contenido listo para usar</div>
+    <div class="s-title">Scripts de los primeros 10 videos</div>
+    <div class="s-sub">Guiones estructurados con hook, desarrollo y CTA. Están pensados para TikTok (30–60 segundos). Adáptalos a tu voz natural.</div>
+
+    <!-- Hooks list -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-head"><span class="card-ico">🪝</span><div><div class="card-title">Hooks de alto impacto</div><div class="card-sub">Los primeros 3 segundos determinan si el video se ve completo. Toca para copiar.</div></div></div>
+      <div class="card-body">
+        <div class="hooks-list">
+          <div class="hook-item" onclick="copyHook(this)">"El error que comete el 90% de las pieles grasas" <span class="hook-copy">Copiar</span></div>
+          <div class="hook-item" onclick="copyHook(this)">"Para si llevas años usando retinol y no ves resultados" <span class="hook-copy">Copiar</span></div>
+          <div class="hook-item" onclick="copyHook(this)">"Lo que ninguna marca de skincare quiere que sepas" <span class="hook-copy">Copiar</span></div>
+          <div class="hook-item" onclick="copyHook(this)">"Rating honesto de los 3 productos más vendidos de skincare" <span class="hook-copy">Copiar</span></div>
+          <div class="hook-item" onclick="copyHook(this)">"POV: analizas tu piel conmigo en 60 segundos" <span class="hook-copy">Copiar</span></div>
+          <div class="hook-item" onclick="copyHook(this)">"Si tienes acné adulto, esto es lo que nadie te ha dicho" <span class="hook-copy">Copiar</span></div>
+          <div class="hook-item" onclick="copyHook(this)">"Tu limpiador facial te está haciendo más daño que bien" <span class="hook-copy">Copiar</span></div>
+          <div class="hook-item" onclick="copyHook(this)">"Ingredientes que NUNCA debes mezclar en tu rutina" <span class="hook-copy">Copiar</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <div class="acc-item" id="sc1">
+      <button class="acc-btn" onclick="toggleAcc('sc1')">
+        <div class="acc-ico" style="background:rgba(255,50,50,.1);font-weight:700;color:#ff6b6b;font-size:.8rem">01</div>
+        Presentación + propuesta de valor
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <div class="script-box"><div class="script-label">Hook (0–3 seg)</div><div class="script-text">"Si nadie te ha explicado cómo funciona tu piel de verdad, este video es para ti."</div></div>
+        <div class="script-box"><div class="script-label">Desarrollo (3–45 seg)</div><div class="script-text">"Soy Barbara, cosmetóloga certificada. Mi trabajo no es venderte productos — es enseñarte a entender tu piel para que tomes decisiones informadas. Hago asesorías personalizadas online donde analizamos juntas tu tipo de piel, tus preocupaciones y te armo una rutina real, con ciencia detrás, adaptada exactamente a ti."</div></div>
+        <div class="script-box"><div class="script-label">CTA (45–60 seg)</div><div class="script-text">"Si quieres saber qué necesita realmente tu piel, agenda tu consulta — el link está en mi bio."</div></div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="sc2">
+      <button class="acc-btn" onclick="toggleAcc('sc2')">
+        <div class="acc-ico" style="background:rgba(26,107,74,.15);font-weight:700;color:var(--emerald-lt);font-size:.8rem">02</div>
+        Mito: "la piel grasa no necesita hidratante"
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <div class="script-box"><div class="script-label">Hook</div><div class="script-text">"Si tienes piel grasa y no usas hidratante porque crees que no lo necesitas, te estás equivocando."</div></div>
+        <div class="script-box"><div class="script-label">Desarrollo</div><div class="script-text">"La grasa que produce tu piel y la hidratación son cosas distintas. Cuando no hidratas, tu piel lo interpreta como sequedad y produce MÁS grasa para compensar. Es un ciclo que empeora el problema. Un hidratante oil-free, no comedogénico, calma esa producción excesiva de sebo."</div></div>
+        <div class="script-box"><div class="script-label">CTA</div><div class="script-text">"¿Quieres saber cuál hidratante va con tu tipo específico de piel? Te ayudo en mi consulta — link en bio."</div></div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="sc3">
+      <button class="acc-btn" onclick="toggleAcc('sc3')">
+        <div class="acc-ico" style="background:rgba(245,158,11,.1);font-weight:700;color:#fbbf24;font-size:.8rem">03</div>
+        "Para mi clienta con acné adulto"
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <div class="script-box"><div class="script-label">Hook</div><div class="script-text">"Esto es lo primero que le digo a una clienta que llega con acné adulto después de los 25."</div></div>
+        <div class="script-box"><div class="script-label">Desarrollo</div><div class="script-text">"El acné adulto tiene causas distintas al acné adolescente. Generalmente está relacionado con cambios hormonales, estrés o una barrera cutánea dañada por productos agresivos. Lo primero que hago es calmar la inflamación y reparar la barrera — nada de tratamientos agresivos al inicio. Luego sí incorporamos activos como niacinamida o ácido azelaico."</div></div>
+        <div class="script-box"><div class="script-label">CTA</div><div class="script-text">"Si esto te suena familiar, agenda una asesoría personalizada y lo vemos juntas. Link en bio."</div></div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="sc4">
+      <button class="acc-btn" onclick="toggleAcc('sc4')">
+        <div class="acc-ico" style="background:rgba(168,85,247,.1);font-weight:700;color:#c4b5fd;font-size:.8rem">04</div>
+        Rutina mínima para empezar desde cero
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <div class="script-box"><div class="script-label">Hook</div><div class="script-text">"Si no sabes nada de skincare y quieres empezar, solo necesitas 3 productos. Te los digo."</div></div>
+        <div class="script-box"><div class="script-label">Desarrollo</div><div class="script-text">"Primero: un limpiador suave, sin sulfatos agresivos. Segundo: un hidratante acorde a tu tipo de piel. Tercero: protector solar SPF 50 en la mañana — este es el más importante de todos y el que más diferencia hace a largo plazo. Con estos tres pasos ya tienes más que la mayoría."</div></div>
+        <div class="script-box"><div class="script-label">CTA</div><div class="script-text">"¿Quieres saber exactamente qué marcas y productos van con TU piel? Eso es lo que hacemos en la Consulta Express — link en bio."</div></div>
+      </div></div>
+    </div>
+
+    <div class="acc-item" id="sc5">
+      <button class="acc-btn" onclick="toggleAcc('sc5')">
+        <div class="acc-ico" style="background:rgba(59,130,246,.1);font-weight:700;color:#93c5fd;font-size:.8rem">05</div>
+        Lo que nunca mezcles en tu rutina
+        <svg class="acc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body"><div class="acc-content">
+        <div class="script-box"><div class="script-label">Hook</div><div class="script-text">"Hay combinaciones de ingredientes que literalmente irritan tu piel. Para antes de tu rutina de esta noche."</div></div>
+        <div class="script-box"><div class="script-label">Desarrollo</div><div class="script-text">"Número uno: retinol con vitamina C — cada uno por su lado, nunca juntos. El retinol va de noche, la vitamina C de mañana. Número dos: AHA/BHA con retinol — doble exfoliación que destruye tu barrera. Número tres: niacinamida con vitamina C en alta concentración — pueden formar una combinación que irrita. Sepáralos por horario o úsalos en días distintos."</div></div>
+        <div class="script-box"><div class="script-label">CTA</div><div class="script-text">"¿Quieres que revise tus productos y te diga si los estás usando bien? Eso hacemos en la Revisión de Productos — link en bio."</div></div>
+      </div></div>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB: KPIS ═════════════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-kpis">
+
+    <div class="label-tag">Métricas clave</div>
+    <div class="s-title">KPIs para medir el éxito</div>
+    <div class="s-sub">Lo que no se mide no se mejora. Revisa estas métricas cada semana — te dicen qué contenido funciona y qué ajustar.</div>
+
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi-card">
+        <div class="kpi-platform" style="color:#ff6b6b">TikTok</div>
+        <div class="kpi-row"><span class="kpi-name">Vistas promedio/video</span><span class="kpi-target">&gt; 5.000</span></div>
+        <div class="kpi-row"><span class="kpi-name">Retención promedio</span><span class="kpi-target">&gt; 30%</span></div>
+        <div class="kpi-row"><span class="kpi-name">Tasa de follows</span><span class="kpi-target">&gt; 2%</span></div>
+        <div class="kpi-row"><span class="kpi-name">Visitas al perfil</span><span class="kpi-target">+15%/sem</span></div>
+        <div class="kpi-row"><span class="kpi-name">Clicks bio link</span><span class="kpi-target">&gt; 50/sem</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-platform" style="color:#c77dff">Instagram</div>
+        <div class="kpi-row"><span class="kpi-name">Alcance stories</span><span class="kpi-target">&gt; 500/día</span></div>
+        <div class="kpi-row"><span class="kpi-name">Clicks link bio</span><span class="kpi-target">&gt; 30/sem</span></div>
+        <div class="kpi-row"><span class="kpi-name">Guardados (saves)</span><span class="kpi-target">&gt; 50/post</span></div>
+        <div class="kpi-row"><span class="kpi-name">Respuestas stories</span><span class="kpi-target">&gt; 10/día</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi-card">
+        <div class="kpi-platform" style="color:var(--emerald-lt)">Página web</div>
+        <div class="kpi-row"><span class="kpi-name">Visitas/semana</span><span class="kpi-target">&gt; 200</span></div>
+        <div class="kpi-row"><span class="kpi-name">Desde redes</span><span class="kpi-target">&gt; 60%</span></div>
+        <div class="kpi-row"><span class="kpi-name">Aperturas del modal</span><span class="kpi-target">&gt; 30/sem</span></div>
+        <div class="kpi-row"><span class="kpi-name">Tasa de conversión</span><span class="kpi-target">&gt; 10%</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-platform" style="color:#fbbf24">Negocio</div>
+        <div class="kpi-row"><span class="kpi-name">Reservas/semana</span><span class="kpi-target">5+ (mes 2)</span></div>
+        <div class="kpi-row"><span class="kpi-name">Desde redes</span><span class="kpi-target">&gt; 70%</span></div>
+        <div class="kpi-row"><span class="kpi-name">Ingreso mensual</span><span class="kpi-target">+20%/mes</span></div>
+        <div class="kpi-row"><span class="kpi-name">Tasa de repetición</span><span class="kpi-target">&gt; 30%</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-ico">📊</span><div><div class="card-title">Dónde ver estas métricas</div></div></div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="font-size:1rem;flex-shrink:0">📱</div>
+            <div><div style="font-size:.85rem;font-weight:600;margin-bottom:2px">TikTok Analytics</div><div style="font-size:.77rem;color:var(--g-mid)">Perfil → Analytics. Muestra vistas, retención, datos de audiencia y horas de mayor actividad.</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="font-size:1rem;flex-shrink:0">📸</div>
+            <div><div style="font-size:.85rem;font-weight:600;margin-bottom:2px">Instagram Insights</div><div style="font-size:.77rem;color:var(--g-mid)">Perfil → Estadísticas. Alcance, impresiones, clicks y datos de la audiencia.</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="font-size:1rem;flex-shrink:0">🔍</div>
+            <div><div style="font-size:.85rem;font-weight:600;margin-bottom:2px">Google Search Console</div><div style="font-size:.77rem;color:var(--g-mid)">search.google.com/search-console — qué palabras traen tráfico orgánico al sitio.</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="font-size:1rem;flex-shrink:0">📈</div>
+            <div><div style="font-size:.85rem;font-weight:600;margin-bottom:2px">Panel Admin BOSSKIN</div><div style="font-size:.77rem;color:var(--g-mid)">Las reservas y conversiones se ven directamente en el panel de admin.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB: CHECKLIST ════════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-checklist">
+
+    <div class="label-tag">Plan de acción</div>
+    <div class="s-title">Checklist de arranque</div>
+    <div class="s-sub">Tareas ordenadas por semana. Marca cada una al completarla — el progreso se guarda automáticamente.</div>
+
+    <div class="progress-label">
+      <span id="progress-text">0 de 20 completadas</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+
+    <div class="checklist" id="checklist">
+
+      <div class="check-week">Esta semana — Setup</div>
+
+      <div class="check-item" data-id="c1" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Actualizar bio de TikTok con link a bosskinlab.com/?agendar</div><div class="check-detail">El link en bio es el único lugar clicable en TikTok — es crítico que sea el link de reserva.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c2" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Actualizar bio de Instagram con link y descripción optimizada</div><div class="check-detail">Usar el texto de bio sugerido en la pestaña Resumen.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c3" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Crear Highlight "Servicios" en Instagram</div><div class="check-detail">Con los 3 servicios, precios y CTA a agendar.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c4" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Crear Highlight "Resultados" con antes/después de clientas</div><div class="check-detail">Pedir permiso a las clientas antes de publicar.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c5" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Fijar en TikTok el video de presentación (quién soy y qué hago)</div><div class="check-detail">Es lo primero que ve alguien que llega al perfil. Usar script 01 de la pestaña Scripts.</div></div>
+      </div>
+
+      <div class="check-week">Semana 1 — Primeros videos</div>
+
+      <div class="check-item" data-id="c6" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Planificar 10 temas para el primer batch de grabación</div><div class="check-detail">Usar los 5 scripts de esta página + 5 ideas propias. Mezclar pilares.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c7" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Grabar 10 videos en un mismo día (batch recording)</div><div class="check-detail">Misma ropa, misma luz. Anota los temas antes de empezar para no interrumpir el flow.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c8" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Publicar primer video y responder todos los comentarios en las primeras 2 horas</div><div class="check-detail">Las respuestas rápidas le dicen al algoritmo que el video genera engagement.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c9" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Publicar primer carrusel educativo en Instagram</div><div class="check-detail">5–7 slides sobre un tema de skincare. Los carruseles tienen el mayor alcance orgánico en IG.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c10" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Activar Q&A en Instagram Stories "Pregúntame sobre tu piel"</div><div class="check-detail">Responder cada pregunta con un video de TikTok — contenido gratis asegurado.</div></div>
+      </div>
+
+      <div class="check-week">Semana 2–4 — Crecimiento</div>
+
+      <div class="check-item" data-id="c11" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Crear perfil en Google Business (gratis)</div><div class="check-detail">business.google.com → Nombre: "BOSSKIN — Barbara Villalobos", categoría: Skin Care Specialist.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c12" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 94" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Pedir reseñas de Google a las primeras 10 clientas</div><div class="check-detail">Enviar el link de reseña directo por WhatsApp después de cada consulta.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c13" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Registrar la página en Google Search Console</div><div class="check-detail">search.google.com/search-console — necesitas verificar la propiedad. Solicitar la etiqueta meta.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c14" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Analizar los primeros 10 videos: ¿cuál tuvo más vistas?</div><div class="check-detail">Hacer más videos del mismo tema y formato que mejor funcionó.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c15" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Publicar primer antes/después de clienta (con permiso)</div><div class="check-detail">Es el contenido que más directo convierte en reservas.</div></div>
+      </div>
+
+      <div class="check-week">Mes 2–3 — Consolidación</div>
+
+      <div class="check-item" data-id="c16" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Establecer rutina semanal de batch recording (cada lunes)</div><div class="check-detail">Grabar 10 videos cada lunes. Publicar uno por día el resto de la semana.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c17" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Crear un video colaboración o respuesta a un perfil de skincare grande</div><div class="check-detail">Duet o Stitch en TikTok con un video popular del nicho. Alcance exponencial.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c18" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Revisar KPIs del mes: vistas, clicks al bio, reservas desde redes</div><div class="check-detail">Ajustar formatos y temas según lo que generó más conversiones.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c19" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Evaluar agregar una promoción de lanzamiento (ej: descuento primera consulta)</div><div class="check-detail">Una oferta temporal genera urgencia. Solo si la agenda tiene espacio disponible.</div></div>
+      </div>
+
+      <div class="check-item" data-id="c20" onclick="toggleCheck(this)">
+        <div class="check-box"><svg class="check-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="check-txt"><div class="check-title">Evaluar formato de pack o membresía mensual de seguimiento</div><div class="check-detail">Un cliente recurrente vale más que 4 clientes nuevos. Un pack de seguimiento mensual es fácil de vender una vez que confían en Barbara.</div></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── Tabs ── */
+  function switchTab(id) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${id}'`)));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${id}`));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── Accordion ── */
+  function toggleAcc(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+  }
+
+  /* ── Checklist con localStorage ── */
+  const STORE_KEY = 'bosskin_checklist_v1';
+
+  function loadChecklist() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+  }
+  function saveChecklist(state) {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  }
+
+  function toggleCheck(el) {
+    el.classList.toggle('done');
+    const state = loadChecklist();
+    state[el.dataset.id] = el.classList.contains('done');
+    saveChecklist(state);
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const items = document.querySelectorAll('.check-item');
+    const done  = document.querySelectorAll('.check-item.done').length;
+    const pct   = Math.round(done / items.length * 100);
+    document.getElementById('progress-text').textContent = `${done} de ${items.length} completadas`;
+    document.getElementById('progress-pct').textContent  = `${pct}%`;
+    document.getElementById('progress-fill').style.width = `${pct}%`;
+  }
+
+  function initChecklist() {
+    const state = loadChecklist();
+    document.querySelectorAll('.check-item').forEach(el => {
+      if (state[el.dataset.id]) el.classList.add('done');
+    });
+    updateProgress();
+  }
+
+  /* ── Copiar hooks ── */
+  function copyHook(el) {
+    const text = el.childNodes[0].textContent.trim();
+    navigator.clipboard.writeText(text).then(() => showToast('✓ Hook copiado')).catch(() => {});
+  }
+
+  /* ── Toast ── */
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  initChecklist();
+</script>
+</body>
+</html>
