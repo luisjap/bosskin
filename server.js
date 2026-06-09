@@ -160,6 +160,19 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+/* ── Editor de video — requiere COOP/COEP para SharedArrayBuffer (FFmpeg + Whisper) ── */
+app.use('/editor', (req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+}, express.static(path.join(__dirname, 'public', 'editor')));
+
+app.get('/editor', (req, res) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.sendFile(path.join(__dirname, 'public', 'editor', 'index.html'));
+});
+
 /* ── Middlewares ──────────────────────────────────────────────────────────── */
 app.use(helmet({ contentSecurityPolicy: false }));
 const ALLOWED = ['https://bosskinlab.com','https://www.bosskinlab.com','http://localhost:3004','http://localhost:3000'];
