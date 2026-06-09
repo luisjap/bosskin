@@ -247,6 +247,13 @@
       th, td { padding: 10px 10px; }
     }
 
+    /* ══ DESKTOP: ocultar todo lo mobile ══════════════════════════════════ */
+    @media (min-width: 769px) {
+      .m-tab, .m-drawer-overlay, .m-day-overlay, .m-bottom-nav,
+      #m-hamburger, #m-topbar-badge, #m-panel-back-bar,
+      .m-pending-header, .m-pending-note { display: none !important; }
+    }
+
     /* ══ MOBILE APP DESIGN ════════════════════════════════════════════════ */
     @media (max-width: 768px) {
       /* ── Ocultar elementos desktop ── */
