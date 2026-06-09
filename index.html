@@ -1127,6 +1127,16 @@
       </div>`).join('');
   })();
 
+  /* ── Auto-open booking desde URL (?agendar o ?agendar=express/asesoria/revision) ── */
+  (function() {
+    const p = new URLSearchParams(location.search).get('agendar');
+    if (p !== null) {
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => openBooking(p || null), 400);
+      }, { once: true });
+    }
+  })();
+
   /* ── Progress bar ─────────────────────────────────────────────────────── */
   const prog = document.getElementById('progress');
   window.addEventListener('scroll', () => {
