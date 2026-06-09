@@ -1130,11 +1130,7 @@
   /* ── Auto-open booking desde URL (?agendar o ?agendar=express/asesoria/revision) ── */
   (function() {
     const p = new URLSearchParams(location.search).get('agendar');
-    if (p !== null) {
-      window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => openBooking(p || null), 400);
-      }, { once: true });
-    }
+    if (p !== null) setTimeout(() => openBooking(p || null), 350);
   })();
 
   /* ── Progress bar ─────────────────────────────────────────────────────── */
