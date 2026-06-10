@@ -1,4 +1,0 @@
-# FFmpeg nativo (con libass) + fuentes para que los subtítulos se rendericen.
-# Sin fonts-liberation/fontconfig, libass no puede dibujar el texto.
-[phases.setup]
-aptPkgs = ["ffmpeg", "fonts-liberation", "fontconfig"]
