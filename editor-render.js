@@ -53,21 +53,25 @@ function buildASS(kept, effects, vw, vh) {
   const speed = effects.speed || 1.0;
   const style = effects.subtitleStyle || 'tiktok';
   const timeMap = buildTimeMap(kept);
-  const fontSize = Math.round(vw * (style === 'minimal' ? 0.055 : 0.072));
-  const marginV  = Math.round(vh * 0.22);
-  const outline  = style === 'minimal' ? 2 : 5;
+  // Tamaño y márgenes relativos al ancho real del video (vertical = angosto)
+  const fontSize = Math.round(vw * (style === 'minimal' ? 0.05 : 0.058));
+  const marginV  = Math.round(vh * 0.16);
+  const marginLR = Math.round(vw * 0.05);   // margen lateral pequeño
+  const outline  = Math.max(2, Math.round(fontSize * 0.08));
   const hi = rgbToAss(effects.highlightColor);
 
+  // WrapStyle 0 = ajuste de línea inteligente (el texto largo baja de línea
+  // en vez de salirse por los costados). Fuente Liberation Sans (instalada).
   const header = `[Script Info]
 ScriptType: v4.00+
 PlayResX: ${vw}
 PlayResY: ${vh}
-WrapStyle: 2
+WrapStyle: 0
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Main,Arial,${fontSize},&H00FFFFFF,&H000000FF,&H00101010,&H64000000,-1,0,0,0,100,100,1,0,1,${outline},2,2,80,80,${marginV},1
+Style: Main,Liberation Sans,${fontSize},&H00FFFFFF,&H000000FF,&H00101010,&H64000000,-1,0,0,0,100,100,0,0,1,${outline},2,2,${marginLR},${marginLR},${marginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`;
@@ -96,8 +100,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
         const t = escAss(ww.text);
         if (k === j) {
           return style === 'bold-color'
-            ? `{\\c${hi}\\fscx118\\fscy118}${t}{\\r}`
-            : `{\\fscx116\\fscy116}${t}{\\r}`;
+            ? `{\\c${hi}\\fscx108\\fscy108}${t}{\\r}`
+            : `{\\fscx108\\fscy108}${t}{\\r}`;
         }
         return style === 'bold-color' ? `{\\alpha&H40&}${t}{\\r}` : t;
       }).join(' ');
@@ -121,9 +125,11 @@ function buildFilterComplex(kept, effects, vw, vh, assPath) {
   parts.push(`[0:v]split=${n}${vSplit}`);
   parts.push(`[0:a]asplit=${n}${aSplit}`);
 
+  // fps=30 fuerza frame rate constante en cada segmento. Sin esto, los videos
+  // VFR (WhatsApp/celular) se desfasan: el video se estira y el audio no.
   kept.forEach((s, i) => {
     const st = s.start.toFixed(3), en = s.end.toFixed(3);
-    parts.push(`[vs${i}]trim=start=${st}:end=${en},setpts=PTS-STARTPTS[v${i}]`);
+    parts.push(`[vs${i}]trim=start=${st}:end=${en},setpts=PTS-STARTPTS,fps=30[v${i}]`);
     parts.push(`[as${i}]atrim=start=${st}:end=${en},asetpts=PTS-STARTPTS[a${i}]`);
   });
 
@@ -155,13 +161,13 @@ function buildFilterComplex(kept, effects, vw, vh, assPath) {
   vChain.push('format=yuv420p');
   parts.push(`[cv]${vChain.join(',')}[vout]`);
 
-  // Audio
-  const aChain = [];
+  // Audio — aresample asegura sincronía; dynaudnorm normaliza sin riesgo de
+  // silenciar (loudnorm en una pasada a veces dejaba el audio mudo).
+  const aChain = ['aresample=async=1:first_pts=0'];
   if (speed !== 1.0) {
     aChain.push(speed <= 2.0 ? `atempo=${speed}` : `atempo=2.0,atempo=${(speed / 2).toFixed(3)}`);
   }
-  if (effects.loudnorm) aChain.push('loudnorm=I=-14:TP=-1.5:LRA=11');
-  if (!aChain.length) aChain.push('anull');
+  if (effects.loudnorm) aChain.push('dynaudnorm=f=200:g=15');
   parts.push(`[ca]${aChain.join(',')}[aout]`);
 
   return parts.join(';');
@@ -204,10 +210,12 @@ async function renderVideo({ inputPath, segments, effects, vw, vh }) {
       '-filter_complex', filter,
       '-map', '[vout]', '-map', '[aout]',
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '160k',
+      '-r', '30',
+      '-c:a', 'aac', '-b:a', '160k', '-ac', '2',
       '-movflags', '+faststart',
       outPath,
     ];
+    console.log(`[editor] render: ${kept.length} segmentos, subs=${useSubs}, ${vw}x${vh}`);
 
     try {
       await runFFmpeg(baseArgs);
