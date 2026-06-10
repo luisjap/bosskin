@@ -194,66 +194,53 @@ const bookingLimiter  = rateLimit({ windowMs:60_000, max:5,   message:{ error:'D
 const adminLimiter    = rateLimit({ windowMs:60_000, max:60,  message:{ error:'Demasiadas solicitudes.' } });
 const slotLimiter     = rateLimit({ windowMs:60_000, max:30,  message:{ error:'Demasiadas solicitudes.' } });
 const calendarLimiter = rateLimit({ windowMs:60_000, max:20,  message:'Demasiadas solicitudes.' });
-const editorLimiter   = rateLimit({ windowMs:600_000, max:15, message:{ error:'Demasiadas solicitudes, espera unos minutos.' } });
+const editorLimiter   = rateLimit({ windowMs:600_000, max:20, message:{ error:'Demasiadas solicitudes, espera unos minutos.' } });
 
-/* ── Editor de video — sesiones (video temporal entre transcribir y procesar) ── */
-const editorSessions = new Map(); // sessionId → { videoPath, expiry }
-function cleanupEditorSession(id) {
-  const s = editorSessions.get(id);
-  if (s) { try { fs.unlinkSync(s.videoPath); } catch {} editorSessions.delete(id); }
-}
-setInterval(() => {
-  const now = Date.now();
-  editorSessions.forEach((s, id) => { if (s.expiry < now) cleanupEditorSession(id); });
-}, 300_000);
-
-/* PASO 1 — Subir video y transcribir con Groq (whisper-large-v3) */
+/* ── Editor de video (stateless: sin sesiones, confiable en Railway) ──────────
+   PASO 1 — Subir video y transcribir con Groq (whisper-large-v3) */
 app.post('/api/editor/transcribe', editorLimiter, videoUpload.single('video'), async (req, res) => {
   const videoPath = req.file?.path;
   if (!videoPath) return res.status(400).json({ error: 'No se recibió ningún video.' });
-
   try {
     const { words, duration } = await transcribeWithGroq(videoPath);
-
-    // Guardar el video para el paso de procesado (30 min de validez)
-    const sessionId = crypto.randomBytes(16).toString('hex');
-    editorSessions.set(sessionId, { videoPath, expiry: Date.now() + 30 * 60_000 });
-
-    res.json({ sessionId, words, duration });
+    res.json({ words, duration });
   } catch (e) {
     console.error('[editor] Transcripción:', e.message);
-    try { fs.unlinkSync(videoPath); } catch {}
     res.status(500).json({ error: e.message || 'Error al transcribir el video.' });
+  } finally {
+    try { fs.unlinkSync(videoPath); } catch {}
   }
 });
 
-/* PASO 2 — Procesar (cortes + subtítulos + efectos) con el video ya subido */
-app.post('/api/editor/process', editorLimiter, async (req, res) => {
-  const { sessionId, segments, effects, vw, vh } = req.body || {};
-  const session = sessionId && editorSessions.get(sessionId);
-  if (!session) {
-    return res.status(410).json({ error: 'La sesión expiró. Vuelve a subir el video.' });
-  }
-  if (!Array.isArray(segments) || !segments.length) {
-    return res.status(400).json({ error: 'Faltan los segmentos a procesar.' });
-  }
+/* PASO 2 — Subir el video de nuevo + cortes/efectos y procesar con FFmpeg */
+app.post('/api/editor/process', editorLimiter, videoUpload.single('video'), async (req, res) => {
+  const inputPath = req.file?.path;
+  if (!inputPath) return res.status(400).json({ error: 'No se recibió ningún video.' });
 
   let result = null;
   try {
-    result = await renderVideo({ inputPath: session.videoPath, segments, effects, vw, vh });
+    let payload;
+    try { payload = JSON.parse(req.body.payload || '{}'); }
+    catch { return res.status(400).json({ error: 'Datos inválidos.' }); }
+
+    const { segments, effects, vw, vh } = payload;
+    if (!Array.isArray(segments) || !segments.length) {
+      return res.status(400).json({ error: 'Faltan los segmentos a procesar.' });
+    }
+
+    result = await renderVideo({ inputPath, segments, effects, vw, vh });
 
     res.setHeader('Content-Type', 'video/mp4');
     res.setHeader('Content-Disposition', 'attachment; filename="bosskin-editado.mp4"');
     const stream = fs.createReadStream(result.outPath);
     stream.pipe(res);
-    stream.on('close', () => {
-      try { fs.rmSync(result.work, { recursive: true, force: true }); } catch {}
-      cleanupEditorSession(sessionId);
-    });
+    stream.on('close', () => { try { fs.rmSync(result.work, { recursive: true, force: true }); } catch {} });
   } catch (e) {
     console.error('[editor] Procesado:', e.message);
     if (!res.headersSent) res.status(500).json({ error: e.message || 'Error al procesar el video.' });
     if (result?.work) { try { fs.rmSync(result.work, { recursive: true, force: true }); } catch {} }
+  } finally {
+    try { fs.unlinkSync(inputPath); } catch {}
   }
 });
 
