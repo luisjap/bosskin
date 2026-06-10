@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reagendar — BOSSKIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--black:#0D0D0D;--card:#111a14;--emerald:#1A6B4A;--emerald-h:#145a3d;--emerald-lt:#D4EDE3;--g-mid:#7A7A7A;--g-light:#C4C4C4;--ft:'Playfair Display',serif;--fb:'DM Sans',sans-serif}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--fb);background:var(--black);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;line-height:1.6}
+    .box{background:var(--card);border:1px solid rgba(26,107,74,.25);border-radius:16px;padding:32px 28px;max-width:440px;width:100%}
+    .logo{font-family:var(--ft);font-size:1.6rem;font-weight:900;text-align:center}
+    .sub{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.35);text-align:center;margin-bottom:24px}
+    h1{font-family:var(--ft);font-size:1.25rem;margin-bottom:6px}
+    .muted{color:var(--g-mid);font-size:.86rem;margin-bottom:18px}
+    .cur{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;font-size:.85rem;margin-bottom:18px}
+    label{display:block;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px}
+    input[type=date]{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:11px 13px;color:#fff;font-family:var(--fb);font-size:.92rem;outline:none;color-scheme:dark;margin-bottom:16px}
+    input[type=date]:focus{border-color:var(--emerald)}
+    .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+    .slot{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 4px;text-align:center;font-size:.84rem;color:var(--g-light);cursor:pointer;transition:all .15s}
+    .slot:hover:not(.off){border-color:var(--emerald);color:#fff}
+    .slot.sel{background:var(--emerald);border-color:var(--emerald);color:#fff;font-weight:600}
+    .slot.off{opacity:.3;cursor:not-allowed;text-decoration:line-through}
+    .none{grid-column:1/-1;color:var(--g-mid);font-size:.82rem;padding:8px 0;text-align:center}
+    .btn{width:100%;background:var(--emerald);color:#fff;border:none;border-radius:10px;padding:13px;font-family:var(--fb);font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+    .btn:hover{background:var(--emerald-h)}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .msg{font-size:.86rem;padding:11px 14px;border-radius:9px;margin-bottom:16px;display:none}
+    .msg.err{background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.3);color:#f87171;display:block}
+    .msg.ok{background:rgba(26,107,74,.15);border:1px solid rgba(26,107,74,.3);color:var(--emerald-lt);display:block}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">BOSSKIN</div>
+    <div class="sub">Reagendar sesión</div>
+    <div id="content"><p class="muted">Cargando tu reserva…</p></div>
+  </div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id'); const token = params.get('token');
+  const content = document.getElementById('content');
+  let selDate = '', selTime = '';
+
+  function fmt(d){ return new Date(d+'T12:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'}); }
+
+  async function init(){
+    if(!id || !token){ content.innerHTML = '<p class="msg err">Link inválido.</p>'; return; }
+    try{
+      const r = await fetch('/api/bookings/'+id);
+      if(!r.ok) throw 0;
+      const b = await r.json();
+      if(b.status==='cancelado'){ content.innerHTML='<p class="msg err">Esta reserva está cancelada.</p>'; return; }
+      render(b);
+    }catch{ content.innerHTML='<p class="msg err">No se encontró la reserva.</p>'; }
+  }
+
+  function render(b){
+    const min = new Date(Date.now()+24*3600000).toISOString().split('T')[0];
+    content.innerHTML = `
+      <h1>Cambia tu horario</h1>
+      <p class="muted">Elige una nueva fecha y hora. No se vuelve a cobrar.</p>
+      <div class="cur"><b>${b.service}</b><br>Actual: ${fmt(b.date)} · ${b.time} hrs</div>
+      <div id="msg" class="msg"></div>
+      <label>Nueva fecha</label>
+      <input type="date" id="date" min="${min}">
+      <div id="slots" class="slots"><div class="none">Elige una fecha</div></div>
+      <button class="btn" id="go" disabled>Confirmar nuevo horario</button>`;
+    document.getElementById('date').addEventListener('change', e=>{ selDate=e.target.value; selTime=''; loadSlots(); });
+    document.getElementById('go').addEventListener('click', ()=>submit(b));
+  }
+
+  async function loadSlots(){
+    const wrap = document.getElementById('slots');
+    document.getElementById('go').disabled = true;
+    wrap.innerHTML = '<div class="none">Cargando horarios…</div>';
+    try{
+      const r = await fetch('/api/slots?date='+selDate);
+      const slots = await r.json();
+      if(!slots.length){ wrap.innerHTML='<div class="none">Sin horarios este día</div>'; return; }
+      wrap.innerHTML = slots.map(s=>`<div class="slot ${s.available?'':'off'}" data-t="${s.time}">${s.time}</div>`).join('');
+      wrap.querySelectorAll('.slot:not(.off)').forEach(el=>el.addEventListener('click',()=>{
+        wrap.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));
+        el.classList.add('sel'); selTime=el.dataset.t;
+        document.getElementById('go').disabled=false;
+      }));
+    }catch{ wrap.innerHTML='<div class="none">Error al cargar horarios</div>'; }
+  }
+
+  async function submit(b){
+    const go=document.getElementById('go'), msg=document.getElementById('msg');
+    if(!selDate||!selTime) return;
+    go.disabled=true; go.textContent='Reagendando…'; msg.className='msg';
+    try{
+      const r = await fetch('/api/bookings/'+id+'/reschedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,date:selDate,time:selTime})});
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'Error');
+      content.innerHTML = `<h1>✓ ¡Listo!</h1><p class="muted">Tu sesión quedó reagendada para <b>${fmt(selDate)} a las ${selTime} hrs</b>. Te enviamos un correo de confirmación.</p>`;
+    }catch(e){ msg.className='msg err'; msg.textContent=e.message; go.disabled=false; go.textContent='Confirmar nuevo horario'; }
+  }
+
+  init();
+</script>
+</body>
+</html>

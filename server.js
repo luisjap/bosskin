@@ -308,7 +308,7 @@ async function sendConfirmationEmail(booking) {
           <a href="${googleCalUrl(booking)}" style="display:inline-block;background:#1A6B4A;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-size:.9rem">📅 Agregar a mi calendario</a>
         </div>
         <p style="margin-top:24px;color:#9ca3af;font-size:.85rem">Te enviaremos el link de videollamada antes de tu sesión.</p>
-        ${booking.cancel_token ? `<p style="margin-top:12px;color:#9ca3af;font-size:.82rem">Para cancelar tu reserva (con al menos 24h de anticipación) <a href="${BASE_URL}/api/bookings/${booking.id}/cancel?token=${booking.cancel_token}" style="color:#D4EDE3">haz clic aquí</a>. Si necesitas reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>` : `<p style="margin-top:12px;color:#9ca3af;font-size:.82rem">Si necesitas cancelar o reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>`}
+        ${booking.cancel_token ? `<p style="margin-top:14px;color:#9ca3af;font-size:.82rem">¿Necesitas cambiar tu sesión? Puedes <a href="${BASE_URL}/reagendar.html?id=${booking.id}&token=${booking.cancel_token}" style="color:#D4EDE3">reagendar</a> o <a href="${BASE_URL}/api/bookings/${booking.id}/cancel?token=${booking.cancel_token}" style="color:#D4EDE3">cancelar</a> (con al menos 24h de anticipación).</p>` : `<p style="margin-top:14px;color:#9ca3af;font-size:.82rem">Si necesitas cancelar o reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>`}
       </div>`
     });
     await resend.emails.send({
@@ -355,7 +355,7 @@ async function sendReminders() {
           <div style="margin-top:22px;text-align:center">
             <a href="${googleCalUrl(b)}" style="display:inline-block;background:#1A6B4A;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-size:.9rem">📅 Agregar a mi calendario</a>
           </div>
-          <p style="margin-top:20px;color:#9ca3af;font-size:.82rem">Si no puedes asistir, avísanos respondiendo este correo con anticipación.</p>
+          ${b.cancel_token ? `<p style="margin-top:18px;color:#9ca3af;font-size:.82rem">¿No puedes a esa hora? <a href="${BASE_URL}/reagendar.html?id=${b.id}&token=${b.cancel_token}" style="color:#D4EDE3">Reagenda aquí</a>.</p>` : `<p style="margin-top:18px;color:#9ca3af;font-size:.82rem">Si no puedes asistir, avísanos respondiendo este correo.</p>`}
         </div>`
       });
       // Aviso a Barbara con link de WhatsApp listo para enviar
@@ -551,6 +551,43 @@ app.delete('/api/bookings/:id/cancel', slotLimiter, (req, res) => {
   if (hoursLeft < 24) return res.status(400).json({ error:'No se puede cancelar con menos de 24 horas de anticipación.' });
   updateBooking(booking.id, { status:'cancelado' });
   res.json({ ok:true });
+});
+
+/* ── Reagendar reserva (mueve fecha/hora SIN volver a cobrar) ───────────────── */
+app.post('/api/bookings/:id/reschedule', slotLimiter, async (req, res) => {
+  const { token, date, time } = req.body || {};
+  const booking = getBookings().find(b => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error:'Reserva no encontrada' });
+
+  const authToken  = (req.headers['authorization'] || '').replace('Bearer ', '');
+  const isAdmin    = authToken && (sessions.get(authToken) || 0) > Date.now();
+  const validToken = booking.cancel_token && token === booking.cancel_token;
+  if (!isAdmin && !validToken) return res.status(403).json({ error:'No autorizado' });
+  if (booking.status === 'cancelado') return res.status(400).json({ error:'Esta reserva está cancelada.' });
+
+  // Validar nuevo horario
+  if (!DATE_RE.test(date || '') || !TIME_RE.test(time || '')) return res.status(400).json({ error:'Fecha u hora inválida.' });
+  const cfg = readConfig();
+  if (!cfg.schedule.slots.includes(time)) return res.status(400).json({ error:'Hora no disponible.' });
+  if (readBlocked().dates.includes(date)) return res.status(409).json({ error:'Esa fecha no está disponible.' });
+  const newDt = new Date(`${date}T${time}:00`);
+  if ((newDt - new Date()) / 3_600_000 < 24) return res.status(400).json({ error:'Elige un horario con al menos 24h de anticipación.' });
+  // No permitir reagendar a último momento la sesión actual
+  const curDt = new Date(`${booking.date}T${booking.time}:00`);
+  if (!isAdmin && (curDt - new Date()) / 3_600_000 < 24) return res.status(400).json({ error:'No se puede reagendar con menos de 24h para tu sesión actual.' });
+
+  try {
+    const result = await withLock(async () => {
+      const clash = getBookings().find(b => b.id !== booking.id && b.date === date && b.time === time && b.status !== 'cancelado');
+      if (clash) return { conflict: true };
+      updateBooking(booking.id, { date, time, reminded: false });
+      return { ok: true };
+    });
+    if (result.conflict) return res.status(409).json({ error:'Ese horario ya está reservado. Elige otro.' });
+    const updated = getBookings().find(b => b.id === booking.id);
+    if (updated && updated.status === 'confirmado') sendConfirmationEmail(updated);
+    res.json({ ok:true, date, time });
+  } catch(e) { console.error('Reschedule error:', e.message); res.status(500).json({ error:'Error al reagendar, intenta nuevamente.' }); }
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
