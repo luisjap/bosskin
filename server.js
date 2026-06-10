@@ -6,9 +6,11 @@ const rateLimit    = require('express-rate-limit');
 const multer       = require('multer');
 const path         = require('path');
 const fs           = require('fs');
+const os           = require('os');
 const crypto       = require('crypto');
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const { Resend }   = require('resend');
+const { renderVideo } = require('./editor-render');
 
 /* ── Validar variables de entorno ─────────────────────────────────────────── */
 const REQUIRED_ENV = ['ADMIN_PASSWORD'];
@@ -136,6 +138,16 @@ const upload = multer({
   fileFilter: (_req, file, cb) => cb(null, /^image\//i.test(file.mimetype)),
 });
 
+// Editor de video: subida temporal a disco (videos pueden ser grandes)
+const videoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, os.tmpdir()),
+    filename: (_req, file, cb) => cb(null, `bosskin-in-${crypto.randomBytes(8).toString('hex')}${path.extname(file.originalname) || '.mp4'}`),
+  }),
+  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB
+  fileFilter: (_req, file, cb) => cb(null, /^video\//i.test(file.mimetype)),
+});
+
 /* ── Validación ───────────────────────────────────────────────────────────── */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_RE  = /^\d{4}-\d{2}-\d{2}$/;
@@ -181,6 +193,39 @@ const bookingLimiter  = rateLimit({ windowMs:60_000, max:5,   message:{ error:'D
 const adminLimiter    = rateLimit({ windowMs:60_000, max:60,  message:{ error:'Demasiadas solicitudes.' } });
 const slotLimiter     = rateLimit({ windowMs:60_000, max:30,  message:{ error:'Demasiadas solicitudes.' } });
 const calendarLimiter = rateLimit({ windowMs:60_000, max:20,  message:'Demasiadas solicitudes.' });
+const editorLimiter   = rateLimit({ windowMs:600_000, max:10, message:{ error:'Demasiados videos en proceso, espera unos minutos.' } });
+
+/* ── Editor de video: procesar en el servidor con FFmpeg nativo ───────────── */
+app.post('/api/editor/process', editorLimiter, videoUpload.single('video'), async (req, res) => {
+  const inputPath = req.file?.path;
+  if (!inputPath) return res.status(400).json({ error: 'No se recibió ningún video.' });
+
+  let result = null;
+  try {
+    let payload;
+    try { payload = JSON.parse(req.body.payload || '{}'); }
+    catch { return res.status(400).json({ error: 'Payload inválido.' }); }
+
+    const { segments, effects, vw, vh } = payload;
+    if (!Array.isArray(segments) || !segments.length) {
+      return res.status(400).json({ error: 'Faltan los segmentos a procesar.' });
+    }
+
+    result = await renderVideo({ inputPath, segments, effects, vw, vh });
+
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Disposition', 'attachment; filename="bosskin-editado.mp4"');
+    const stream = fs.createReadStream(result.outPath);
+    stream.pipe(res);
+    stream.on('close', () => { try { fs.rmSync(result.work, { recursive: true, force: true }); } catch {} });
+  } catch (e) {
+    console.error('[editor] Error al procesar video:', e.message);
+    if (!res.headersSent) res.status(500).json({ error: e.message || 'Error al procesar el video.' });
+    if (result?.work) { try { fs.rmSync(result.work, { recursive: true, force: true }); } catch {} }
+  } finally {
+    if (inputPath) { try { fs.unlinkSync(inputPath); } catch {} }
+  }
+});
 
 
 

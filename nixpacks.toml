@@ -1,0 +1,4 @@
+# Instala FFmpeg nativo (con libass para subtítulos) además del runtime de Node.
+# aptPkgs se añade a la fase de setup sin romper la autodetección de Node.
+[phases.setup]
+aptPkgs = ["ffmpeg"]
