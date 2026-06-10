@@ -1,4 +1,6 @@
 node_modules/
 .env
 bookings.json
+blocked.json
+backups/
 *.db

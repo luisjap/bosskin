@@ -105,6 +105,23 @@ function writeDB(data) { const tmp = DB_FILE+'.tmp'; fs.writeFileSync(tmp, JSON.
 function getBookings() { return readDB().bookings; }
 function updateBooking(id, changes) { const db = readDB(); db.bookings = db.bookings.map(b => b.id===id ? {...b,...changes} : b); writeDB(db); }
 function deleteBooking(id) { const db = readDB(); db.bookings = db.bookings.filter(b => b.id!==id); writeDB(db); }
+
+/* ── Respaldos de reservas ──────────────────────────────────────────────────
+   Guarda copias en DATA_DIR/backups y conserva las últimas 14. Protege ante
+   corrupción del archivo. (La persistencia entre deploys depende del volumen
+   de Railway — ver aviso de arranque más abajo.) */
+const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+function backupDB() {
+  try {
+    if (!fs.existsSync(DB_FILE)) return;
+    if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    const stamp = new Date().toISOString().split('T')[0]; // 1 por día
+    fs.copyFileSync(DB_FILE, path.join(BACKUP_DIR, `bookings-${stamp}.json`));
+    // Conservar solo los últimos 14
+    const files = fs.readdirSync(BACKUP_DIR).filter(f => f.startsWith('bookings-')).sort();
+    while (files.length > 14) { try { fs.unlinkSync(path.join(BACKUP_DIR, files.shift())); } catch {} }
+  } catch (e) { console.error('Backup error:', e.message); }
+}
 function readBlocked() {
   try {
     if (!fs.existsSync(BL_FILE)) return { dates:[], slots:{} };
@@ -172,6 +189,8 @@ const bookingLimiter  = rateLimit({ windowMs:60_000, max:5,   message:{ error:'D
 const adminLimiter    = rateLimit({ windowMs:60_000, max:60,  message:{ error:'Demasiadas solicitudes.' } });
 const slotLimiter     = rateLimit({ windowMs:60_000, max:30,  message:{ error:'Demasiadas solicitudes.' } });
 const calendarLimiter = rateLimit({ windowMs:60_000, max:20,  message:'Demasiadas solicitudes.' });
+// Bloqueo de fuerza bruta: máx 8 intentos de login cada 15 min por IP
+const loginLimiter    = rateLimit({ windowMs:900_000, max:8, message:{ error:'Demasiados intentos. Espera 15 minutos.' }, skipSuccessfulRequests:true });
 
 
 
@@ -227,7 +246,7 @@ const COOKIE_OPTS = {
   path:     '/',
 };
 
-app.post('/api/admin/login', adminLimiter, (req, res) => {
+app.post('/api/admin/login', loginLimiter, adminLimiter, (req, res) => {
   const { password } = req.body;
   const stored = process.env.ADMIN_PASSWORD || '';
   // Comparación segura contra timing attacks
@@ -249,6 +268,26 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+/* ── Helpers de calendario ──────────────────────────────────────────────────── */
+function serviceDuration(serviceName) {
+  const svc = readConfig().services.find(s => s.name === serviceName);
+  return svc?.duration || 60;
+}
+// Link "Agregar a Google Calendar" (zona horaria Santiago, sin OAuth)
+function googleCalUrl(booking) {
+  const [h, m] = booking.time.split(':').map(Number);
+  const dur = serviceDuration(booking.service);
+  const endH = h + Math.floor((m + dur) / 60);
+  const endM = (m + dur) % 60;
+  const d = booking.date.replace(/-/g, '');
+  const pad = n => String(n).padStart(2, '0');
+  const start = `${d}T${pad(h)}${pad(m)}00`;
+  const end   = `${d}T${pad(endH)}${pad(endM)}00`;
+  const text  = encodeURIComponent(`${booking.service} — BOSSKIN`);
+  const det   = encodeURIComponent('Tu sesión con Barbara Villalobos. Te enviaremos el link de videollamada antes.');
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&ctz=America/Santiago&details=${det}`;
+}
+
 /* ── Emails ───────────────────────────────────────────────────────────────── */
 async function sendConfirmationEmail(booking) {
   if (!resend) return;
@@ -265,6 +304,9 @@ async function sendConfirmationEmail(booking) {
           <tr><td style="padding:10px 0;color:#6b7280;border-bottom:1px solid #1f2d24">Fecha</td><td style="padding:10px 0;border-bottom:1px solid #1f2d24;text-align:right">${dateStr}</td></tr>
           <tr><td style="padding:10px 0;color:#6b7280">Hora</td><td style="padding:10px 0;text-align:right">${booking.time} hrs</td></tr>
         </table>
+        <div style="margin-top:24px;text-align:center">
+          <a href="${googleCalUrl(booking)}" style="display:inline-block;background:#1A6B4A;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-size:.9rem">📅 Agregar a mi calendario</a>
+        </div>
         <p style="margin-top:24px;color:#9ca3af;font-size:.85rem">Te enviaremos el link de videollamada antes de tu sesión.</p>
         ${booking.cancel_token ? `<p style="margin-top:12px;color:#9ca3af;font-size:.82rem">Para cancelar tu reserva (con al menos 24h de anticipación) <a href="${BASE_URL}/api/bookings/${booking.id}/cancel?token=${booking.cancel_token}" style="color:#D4EDE3">haz clic aquí</a>. Si necesitas reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>` : `<p style="margin-top:12px;color:#9ca3af;font-size:.82rem">Si necesitas cancelar o reagendar escribe a <a href="mailto:reservas@bosskinlab.com" style="color:#D4EDE3">reservas@bosskinlab.com</a>.</p>`}
       </div>`
@@ -275,6 +317,59 @@ async function sendConfirmationEmail(booking) {
       html:`<p>Nueva reserva confirmada:</p><ul><li><b>Nombre:</b> ${escHtml(booking.name)}</li><li><b>Email:</b> ${escHtml(booking.email)}</li><li><b>Teléfono:</b> ${escHtml(booking.phone)}</li><li><b>Servicio:</b> ${escHtml(booking.service)}</li><li><b>Fecha:</b> ${escHtml(dateStr)}</li><li><b>Hora:</b> ${escHtml(booking.time)}</li></ul>`
     });
   } catch(e) { console.error('Email error:', e.message); }
+}
+
+/* ── Recordatorios 24h antes ────────────────────────────────────────────────
+   Cada hora revisa reservas confirmadas cuya sesión es en ~24h y aún no se
+   recordaron: envía recordatorio a la clienta y aviso a Barbara con link de
+   WhatsApp pre-cargado para que la contacte con un toque. */
+function waLink(phone, msg) {
+  const p = String(phone || '').replace(/[^\d+]/g, '');
+  const num = p.startsWith('+') ? p.slice(1) : '56' + p.replace(/^0/, '');
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+}
+
+async function sendReminders() {
+  if (!resend) return;
+  const now = Date.now();
+  for (const b of getBookings()) {
+    if (b.status !== 'confirmado' || b.reminded) continue;
+    const sessionTs = new Date(`${b.date}T${b.time}:00`).getTime();
+    const hoursLeft = (sessionTs - now) / 3_600_000;
+    if (hoursLeft <= 0 || hoursLeft > 26 || hoursLeft < 22) continue; // ventana ~24h
+
+    const dateStr = new Date(b.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+    try {
+      // Recordatorio a la clienta
+      await resend.emails.send({
+        from:'BOSSKIN <reservas@bosskinlab.com>', to: b.email,
+        subject:`⏰ Recordatorio: tu sesión es mañana — ${b.time} hrs`,
+        html:`<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#0e1a12;color:#fff;border-radius:12px">
+          <h1 style="font-size:1.4rem;color:#D4EDE3;margin-bottom:8px">Tu sesión es mañana 🌿</h1>
+          <p style="color:#9ca3af;margin-bottom:20px">Hola ${escHtml(b.name)}, te recordamos tu sesión:</p>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><td style="padding:9px 0;color:#6b7280;border-bottom:1px solid #1f2d24">Servicio</td><td style="padding:9px 0;border-bottom:1px solid #1f2d24;text-align:right">${escHtml(b.service)}</td></tr>
+            <tr><td style="padding:9px 0;color:#6b7280;border-bottom:1px solid #1f2d24">Fecha</td><td style="padding:9px 0;border-bottom:1px solid #1f2d24;text-align:right">${dateStr}</td></tr>
+            <tr><td style="padding:9px 0;color:#6b7280">Hora</td><td style="padding:9px 0;text-align:right">${b.time} hrs</td></tr>
+          </table>
+          <div style="margin-top:22px;text-align:center">
+            <a href="${googleCalUrl(b)}" style="display:inline-block;background:#1A6B4A;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-size:.9rem">📅 Agregar a mi calendario</a>
+          </div>
+          <p style="margin-top:20px;color:#9ca3af;font-size:.82rem">Si no puedes asistir, avísanos respondiendo este correo con anticipación.</p>
+        </div>`
+      });
+      // Aviso a Barbara con link de WhatsApp listo para enviar
+      const msg = `Hola ${b.name}! Te recuerdo tu sesión de ${b.service} mañana ${dateStr} a las ${b.time} hrs 🌿`;
+      await resend.emails.send({
+        from:'BOSSKIN <reservas@bosskinlab.com>', to: process.env.NOTIFICATION_EMAIL || 'reservas@bosskinlab.com',
+        subject:`⏰ Sesión mañana: ${escHtml(b.name)} — ${b.time} hrs`,
+        html:`<p>Mañana tienes sesión con <b>${escHtml(b.name)}</b> (${escHtml(b.service)}) a las ${b.time} hrs.</p>
+          <p><a href="${waLink(b.phone, msg)}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px">💬 Recordarle por WhatsApp</a></p>`
+      });
+      updateBooking(b.id, { reminded: true });
+      console.log(`✓ Recordatorio enviado: ${b.id}`);
+    } catch (e) { console.error('Reminder error:', e.message); }
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -673,6 +768,21 @@ app.use('/api', (req, res) => res.status(404).json({ error:'Endpoint no encontra
 const server = app.listen(PORT, () => {
   console.log(`\n  BOSSKIN corriendo en http://localhost:${PORT}`);
   console.log(`  Admin panel:  http://localhost:${PORT}/admin.html\n`);
+
+  // Aviso crítico: si en producción DATA_DIR no es un volumen persistente,
+  // las reservas se PIERDEN en cada deploy.
+  if (process.env.NODE_ENV === 'production' && !process.env.DATA_DIR) {
+    console.warn('  ⚠️  DATA_DIR no está configurado. En Railway las reservas se');
+    console.warn('  ⚠️  borrarán en cada deploy. Monta un Volume y apunta DATA_DIR a él.\n');
+  }
+
+  // Respaldo al arrancar y luego cada 24h
+  backupDB();
+  setInterval(backupDB, 24 * 3_600_000).unref();
+
+  // Recordatorios 24h antes: revisar cada hora
+  setInterval(sendReminders, 3_600_000).unref();
+  setTimeout(sendReminders, 30_000).unref(); // primera pasada a los 30s
 });
 
 // Apagado limpio: Railway envía SIGTERM al desplegar una versión nueva.
