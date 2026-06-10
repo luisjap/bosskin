@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Páginas internas / utilitarias (no indexar)
+Disallow: /api/
+Disallow: /admin.html
+Disallow: /estrategia.html
+Disallow: /reagendar.html
+Disallow: /confirmacion.html
+
+Sitemap: https://bosskinlab.com/sitemap.xml
