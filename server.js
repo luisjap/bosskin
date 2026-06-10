@@ -144,7 +144,7 @@ const videoUpload = multer({
     destination: (_req, _file, cb) => cb(null, os.tmpdir()),
     filename: (_req, file, cb) => cb(null, `bosskin-in-${crypto.randomBytes(8).toString('hex')}${path.extname(file.originalname) || '.mp4'}`),
   }),
-  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB
+  limits: { fileSize: 150 * 1024 * 1024 }, // 150MB (≈2-3 min de video de celular)
   fileFilter: (_req, file, cb) => cb(null, /^video\//i.test(file.mimetype)),
 });
 
@@ -724,7 +724,22 @@ app.get('/api/admin/calendar-url', adminLimiter, adminAuth, (req, res) => res.js
 /* ── 404 ──────────────────────────────────────────────────────────────────── */
 app.use('/api', (req, res) => res.status(404).json({ error:'Endpoint no encontrado' }));
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n  BOSSKIN corriendo en http://localhost:${PORT}`);
   console.log(`  Admin panel:  http://localhost:${PORT}/admin.html\n`);
 });
+
+// Apagado limpio: Railway envía SIGTERM al desplegar una versión nueva.
+// Lo manejamos para salir con código 0 (sin que npm lo registre como error/crash).
+function gracefulShutdown(signal) {
+  console.log(`\n  Recibido ${signal}, cerrando servidor…`);
+  server.close(() => { console.log('  Servidor cerrado correctamente.'); process.exit(0); });
+  // Si algo queda colgado, forzar salida a los 10s
+  setTimeout(() => process.exit(0), 10_000).unref();
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
+// No dejar que un error puntual en el procesamiento tumbe todo el proceso
+process.on('unhandledRejection', (reason) => console.error('[unhandledRejection]', reason));
+process.on('uncaughtException',  (err)    => console.error('[uncaughtException]', err));
