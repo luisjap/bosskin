@@ -160,16 +160,12 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-/* ── Editor de video — requiere COOP/COEP para SharedArrayBuffer (FFmpeg + Whisper) ── */
-app.use('/editor', (req, res, next) => {
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-  next();
-}, express.static(path.join(__dirname, 'public', 'editor')));
+/* ── Editor de video (FFmpeg single-thread + Whisper, sin SharedArrayBuffer) ──
+   NO se ponen headers COOP/COEP a propósito: require-corp bloquearía la descarga
+   del modelo de Whisper (HuggingFace CDN) y el core de FFmpeg (unpkg). */
+app.use('/editor', express.static(path.join(__dirname, 'public', 'editor')));
 
 app.get('/editor', (req, res) => {
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   res.sendFile(path.join(__dirname, 'public', 'editor', 'index.html'));
 });
 
