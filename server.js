@@ -122,6 +122,51 @@ function backupDB() {
     while (files.length > 14) { try { fs.unlinkSync(path.join(BACKUP_DIR, files.shift())); } catch {} }
   } catch (e) { console.error('Backup error:', e.message); }
 }
+
+/* ── Analítica propia (visitas, clicks, embudo) ─────────────────────────────
+   Contadores en memoria agregados por día; se vuelcan a disco cada 60s.
+   No guarda datos personales, solo conteos. */
+const ANALYTICS_FILE = path.join(DATA_DIR, 'analytics.json');
+let analytics = (() => { try { return JSON.parse(fs.readFileSync(ANALYTICS_FILE, 'utf8')); } catch { return { days: {} }; } })();
+let analyticsDirty = false;
+
+const TRK_SECTIONS = new Set(['hero','services','how','testimonios','precios','cta']);
+const TRK_CLICKS   = new Set(['nav_cta','hero_cta','svc_express','svc_asesoria','svc_revision','whatsapp','footer']);
+const TRK_FUNNEL   = new Set(['booking_open','booking_summary','pay_click']);
+const TRK_SCROLL   = new Set(['25','50','75','100']);
+
+function todayKey() { return new Date().toISOString().split('T')[0]; }
+function analyticsDay() {
+  const d = todayKey();
+  if (!analytics.days[d]) analytics.days[d] = { pv:0, visitors:0, sections:{}, clicks:{}, funnel:{}, scroll:{}, devices:{mobile:0,desktop:0} };
+  return analytics.days[d];
+}
+function saveAnalytics() {
+  if (!analyticsDirty) return;
+  try {
+    // Conservar últimos 90 días
+    const days = Object.keys(analytics.days).sort();
+    while (days.length > 90) delete analytics.days[days.shift()];
+    const tmp = ANALYTICS_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(analytics));
+    fs.renameSync(tmp, ANALYTICS_FILE);
+    analyticsDirty = false;
+  } catch (e) { console.error('Analytics save:', e.message); }
+}
+// Suma contadores de los últimos N días (incluye hoy)
+function analyticsRange(days) {
+  const out = { pv:0, visitors:0, sections:{}, clicks:{}, funnel:{}, scroll:{}, devices:{mobile:0,desktop:0} };
+  const keys = Object.keys(analytics.days).sort().slice(-days);
+  for (const k of keys) {
+    const d = analytics.days[k];
+    out.pv += d.pv||0; out.visitors += d.visitors||0;
+    out.devices.mobile += d.devices?.mobile||0; out.devices.desktop += d.devices?.desktop||0;
+    for (const grp of ['sections','clicks','funnel','scroll']) {
+      for (const [kk,vv] of Object.entries(d[grp]||{})) out[grp][kk] = (out[grp][kk]||0) + vv;
+    }
+  }
+  return out;
+}
 function readBlocked() {
   try {
     if (!fs.existsSync(BL_FILE)) return { dates:[], slots:{} };
@@ -376,6 +421,26 @@ async function sendReminders() {
    RUTAS PÚBLICAS
 ══════════════════════════════════════════════════════════════════════════ */
 
+/* ── Tracking de analítica (público, sin datos personales) ────────────────── */
+const trackLimiter = rateLimit({ windowMs:60_000, max:200, message:{ error:'rate' } });
+app.post('/api/track', trackLimiter, (req, res) => {
+  res.sendStatus(204);
+  try {
+    const { t, k, device, firstToday } = req.body || {};
+    const b = analyticsDay();
+    if (t === 'pageview') {
+      b.pv++;
+      if (firstToday) b.visitors++;
+      if (device === 'mobile') b.devices.mobile++; else b.devices.desktop++;
+    } else if (t === 'section' && TRK_SECTIONS.has(k)) { b.sections[k] = (b.sections[k]||0)+1; }
+    else if (t === 'click'   && TRK_CLICKS.has(k))   { b.clicks[k]   = (b.clicks[k]||0)+1; }
+    else if (t === 'funnel'  && TRK_FUNNEL.has(k))   { b.funnel[k]   = (b.funnel[k]||0)+1; }
+    else if (t === 'scroll'  && TRK_SCROLL.has(String(k))) { b.scroll[k] = (b.scroll[k]||0)+1; }
+    else return;
+    analyticsDirty = true;
+  } catch {}
+});
+
 /* ── Servicios activos (para el frontend) ────────────────────────────────── */
 app.get('/api/services', (req, res) => {
   const cfg = readConfig();
@@ -609,6 +674,18 @@ app.get('/api/admin/stats', adminLimiter, adminAuth, (req, res) => {
   });
 });
 
+/* ── Analítica (admin) ───────────────────────────────────────────────────── */
+app.get('/api/admin/analytics', adminLimiter, adminAuth, (req, res) => {
+  const bookings = getBookings();
+  const paid = bookings.filter(b => b.status === 'confirmado').length;
+  res.json({
+    today:  analyticsRange(1),
+    last7:  analyticsRange(7),
+    last30: analyticsRange(30),
+    paidTotal: paid,
+  });
+});
+
 /* ── Listar reservas ──────────────────────────────────────────────────────── */
 const VALID_STATUSES = new Set(['confirmado','pendiente','cancelado']);
 app.get('/api/admin/bookings', adminLimiter, adminAuth, (req, res) => {
@@ -820,12 +897,16 @@ const server = app.listen(PORT, () => {
   // Recordatorios 24h antes: revisar cada hora
   setInterval(sendReminders, 3_600_000).unref();
   setTimeout(sendReminders, 30_000).unref(); // primera pasada a los 30s
+
+  // Volcar analítica a disco cada 60s
+  setInterval(saveAnalytics, 60_000).unref();
 });
 
 // Apagado limpio: Railway envía SIGTERM al desplegar una versión nueva.
 // Lo manejamos para salir con código 0 (sin que npm lo registre como error/crash).
 function gracefulShutdown(signal) {
   console.log(`\n  Recibido ${signal}, cerrando servidor…`);
+  saveAnalytics();
   server.close(() => { console.log('  Servidor cerrado correctamente.'); process.exit(0); });
   // Si algo queda colgado, forzar salida a los 10s
   setTimeout(() => process.exit(0), 10_000).unref();

@@ -820,6 +820,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Analítica del sitio -->
+      <div id="dash-analytics" style="margin-top:28px"></div>
     </div><!-- /panel dashboard -->
 
     <!-- Panel: Reservas -->
@@ -1081,6 +1084,7 @@
 <div class="m-tab" id="m-tab-stats" style="display:none">
   <div class="m-section-title">Estadísticas</div>
   <div id="m-stats-detail"></div>
+  <div id="m-analytics" style="margin-top:20px"></div>
 </div>
 
 <!-- Tab: Agenda -->
@@ -1772,6 +1776,7 @@
   }
 
   async function renderMobileStats() {
+    renderAnalytics();
     const res  = await apiFetch('/api/admin/stats', {});
     const data = await res.json();
     document.getElementById('m-stats-detail').innerHTML = `
@@ -1953,8 +1958,105 @@
     if (tab === 'dashboard') renderDashboard();
   }
 
+  /* ══ Analítica del sitio ══════════════════════════════════════════════════ */
+  async function renderAnalytics() {
+    let data;
+    try { data = await apiFetch('/api/admin/analytics', {}).then(r => r.json()); }
+    catch { return; }
+    const html = buildAnalyticsHTML(data);
+    ['dash-analytics','m-analytics'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
+  }
+
+  function buildAnalyticsHTML(data) {
+    const f = data.last30 || { sections:{}, clicks:{}, funnel:{}, scroll:{}, devices:{} };
+    const num = n => (n||0).toLocaleString('es-CL');
+    const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+
+    // Tabla resumen Hoy / 7d / 30d
+    const rows = [
+      ['Visitas',            d => d.pv],
+      ['Visitantes únicos',  d => d.visitors],
+      ['Abrieron reserva',   d => d.funnel?.booking_open || 0],
+      ['Click en pagar',     d => d.funnel?.pay_click || 0],
+    ];
+    const summary = `
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;color:rgba(255,255,255,.35);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em">Métrica</th>
+          <th style="text-align:right;padding:8px 10px;color:rgba(255,255,255,.35);font-weight:600;font-size:.68rem">Hoy</th>
+          <th style="text-align:right;padding:8px 10px;color:rgba(255,255,255,.35);font-weight:600;font-size:.68rem">7 días</th>
+          <th style="text-align:right;padding:8px 10px;color:var(--emerald-lt);font-weight:600;font-size:.68rem">30 días</th>
+        </tr></thead>
+        <tbody>${rows.map(([label, fn]) => `
+          <tr style="border-top:1px solid rgba(255,255,255,.05)">
+            <td style="padding:9px 10px;color:var(--white)">${label}</td>
+            <td style="padding:9px 10px;text-align:right;color:var(--g-light)">${num(fn(data.today))}</td>
+            <td style="padding:9px 10px;text-align:right;color:var(--g-light)">${num(fn(data.last7))}</td>
+            <td style="padding:9px 10px;text-align:right;color:var(--emerald-lt);font-weight:600">${num(fn(data.last30))}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+
+    // Embudo de conversión (30 días)
+    const steps = [
+      ['Visitantes',          f.visitors || 0,            '#3b82f6'],
+      ['Vieron servicios',    f.sections?.services || 0,  '#06b6d4'],
+      ['Abrieron reserva',    f.funnel?.booking_open || 0,'#1A6B4A'],
+      ['Llegaron al resumen', f.funnel?.booking_summary||0,'#16a34a'],
+      ['Click en pagar',      f.funnel?.pay_click || 0,   '#fbbf24'],
+    ];
+    const base = steps[0][1] || 1;
+    const funnel = steps.map((s, i) => {
+      const w = Math.max(2, Math.round(s[1] / base * 100));
+      const conv = i === 0 ? '' : `<span style="color:var(--g-mid);font-size:.7rem;margin-left:6px">${pct(s[1], base)}%</span>`;
+      return `<div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:3px">
+          <span style="color:var(--g-light)">${s[0]} ${conv}</span>
+          <span style="color:var(--white);font-weight:600">${num(s[1])}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.05);border-radius:6px;height:8px;overflow:hidden">
+          <div style="width:${w}%;height:100%;background:${s[2]};border-radius:6px"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Dispositivos
+    const mob = f.devices?.mobile || 0, des = f.devices?.desktop || 0, tot = mob + des || 1;
+    const devices = `
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 14px;text-align:center">
+          <div style="font-size:1.4rem">📱</div><div style="font-family:var(--font-t);font-size:1.3rem;font-weight:900;color:var(--emerald-lt)">${pct(mob,tot)}%</div>
+          <div style="font-size:.68rem;color:var(--g-mid)">Móvil (${num(mob)})</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 14px;text-align:center">
+          <div style="font-size:1.4rem">💻</div><div style="font-family:var(--font-t);font-size:1.3rem;font-weight:900;color:var(--emerald-lt)">${pct(des,tot)}%</div>
+          <div style="font-size:.68rem;color:var(--g-mid)">Escritorio (${num(des)})</div>
+        </div>
+      </div>`;
+
+    // Scroll: hasta dónde llegan
+    const sc = f.scroll || {};
+    const scrollRows = [['25','Empezaron a bajar'],['50','Mitad de la página'],['75','Casi al final'],['100','Hasta el final']]
+      .map(([k,lbl]) => `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:5px 0;border-top:1px solid rgba(255,255,255,.05)">
+        <span style="color:var(--g-light)">${lbl}</span><span style="color:var(--white);font-weight:600">${num(sc[k]||0)} <span style="color:var(--g-mid);font-weight:400">(${pct(sc[k]||0, f.visitors||1)}%)</span></span></div>`).join('');
+
+    const card = (title, body) => `
+      <div style="background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px 18px;margin-bottom:14px">
+        <div style="font-family:var(--font-t);font-size:1rem;font-weight:700;color:var(--white);margin-bottom:14px">${title}</div>
+        ${body}
+      </div>`;
+
+    return `
+      <div style="font-family:var(--font-t);font-size:1.2rem;font-weight:700;color:var(--white);margin-bottom:14px">📈 Analítica del sitio</div>
+      ${card('Resumen de visitas', summary)}
+      ${card('Embudo de conversión <span style="font-size:.7rem;color:var(--g-mid);font-weight:400">· últimos 30 días</span>', funnel + `<div style="margin-top:10px;font-size:.74rem;color:var(--g-mid)">De los visitantes, <b style="color:var(--emerald-lt)">${pct(f.funnel?.pay_click||0, f.visitors||1)}%</b> llegó a intentar el pago.</div>`)}
+      ${card('¿Hasta dónde llegan? <span style="font-size:.7rem;color:var(--g-mid);font-weight:400">· scroll</span>', scrollRows)}
+      ${card('Dispositivos', devices)}`;
+  }
+
   async function renderDashboard() {
     renderStats();
+    renderAnalytics();
     const bookings = await apiFetch('/api/admin/bookings', {}).then(r => r.json());
     const today    = new Date().toISOString().split('T')[0];
     const pending  = bookings.filter(b => b.status === 'pendiente');

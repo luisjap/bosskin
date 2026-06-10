@@ -1611,5 +1611,79 @@
 
   document.addEventListener('DOMContentLoaded', loadSiteContent);
 </script>
+
+<!-- ── Analítica BOSSKIN (visitas, secciones, embudo) ── -->
+<script>
+(function(){
+  function send(t, k, extra){
+    try{
+      var body = JSON.stringify(Object.assign({ t:t, k:k }, extra||{}));
+      var blob = new Blob([body], { type:'application/json' });
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/track', blob);
+      else fetch('/api/track', { method:'POST', headers:{'Content-Type':'application/json'}, body:body, keepalive:true });
+    }catch(e){}
+  }
+
+  // Pageview + visitante único por día
+  var today = new Date().toISOString().split('T')[0];
+  var firstToday = false;
+  try { if (localStorage.getItem('bk_vday') !== today) { localStorage.setItem('bk_vday', today); firstToday = true; } }
+  catch(e) { firstToday = true; }
+  var isMobile = window.matchMedia('(max-width:768px)').matches;
+  send('pageview', null, { device: isMobile ? 'mobile' : 'desktop', firstToday: firstToday });
+
+  // Secciones vistas (una vez por sección)
+  var secMap = { services:'services', how:'how', testimonial:'testimonios', cta:'cta' };
+  var seen = {};
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) {
+          var key = secMap[en.target.id];
+          if (key && !seen[key]) { seen[key] = 1; send('section', key); }
+        }
+      });
+    }, { threshold:.4 });
+    Object.keys(secMap).forEach(function(id){ var el = document.getElementById(id); if (el) io.observe(el); });
+  }
+
+  // Profundidad de scroll
+  var depths = [25,50,75,100], hit = {};
+  window.addEventListener('scroll', function(){
+    var st = window.scrollY, h = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = h > 0 ? (st / h * 100) : 0;
+    depths.forEach(function(d){ if (pct >= d && !hit[d]) { hit[d] = 1; send('scroll', String(d)); } });
+  }, { passive:true });
+
+  // Click en WhatsApp (delegado)
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href*="wa.me"]');
+    if (a) send('click', 'whatsapp');
+  });
+
+  // Embudo: envolver funciones existentes
+  function wrap(name, before){
+    var orig = window[name];
+    if (typeof orig !== 'function') return;
+    window[name] = function(){ try{ before.apply(null, arguments); }catch(e){} return orig.apply(this, arguments); };
+  }
+  wrap('openBooking', function(serviceKey){
+    send('funnel', 'booking_open');
+    if (serviceKey === 'express')  send('click', 'svc_express');
+    else if (serviceKey === 'asesoria') send('click', 'svc_asesoria');
+    else if (serviceKey === 'revision') send('click', 'svc_revision');
+  });
+  wrap('confirmAndPay', function(){ send('funnel', 'pay_click'); });
+
+  // Embudo: llegó al resumen (cuando #bk-summary se hace visible)
+  var sumEl = document.getElementById('bk-summary');
+  if (sumEl && 'MutationObserver' in window) {
+    var sumSent = false;
+    new MutationObserver(function(){
+      if (!sumEl.classList.contains('bk-hidden') && !sumSent) { sumSent = true; send('funnel', 'booking_summary'); }
+    }).observe(sumEl, { attributes:true, attributeFilter:['class'] });
+  }
+})();
+</script>
 </body>
 </html>
