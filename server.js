@@ -496,6 +496,50 @@ app.get('/api/slots', slotLimiter, (req, res) => {
   }));
 });
 
+/* ── Días con disponibilidad por mes (para el calendario del frontend) ────── */
+app.get('/api/available-days', calendarLimiter, (req, res) => {
+  const { year, month, service: serviceKey } = req.query;
+  const y = parseInt(year), m = parseInt(month);
+  if (!y || !m || m < 1 || m > 12) return res.status(400).json({ error: 'Parámetros inválidos' });
+
+  const cfg = readConfig();
+  const { slots, minAdvanceHours = 2, maxAdvanceDays = 60, openUntil } = cfg.schedule;
+  const requestedSvc = cfg.services.find(s => s.key === serviceKey && s.active);
+  const requestedDur = requestedSvc?.duration || 0;
+
+  const bl = readBlocked();
+  const allBookings = getBookings().filter(b => b.status !== 'cancelado');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + maxAdvanceDays);
+  const now = new Date();
+
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const result = {};
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dateObj = new Date(y, m - 1, d);
+
+    if (dateObj < today || dateObj > maxDate) { result[dateStr] = false; continue; }
+    if (openUntil && DATE_RE.test(openUntil) && dateStr > openUntil) { result[dateStr] = false; continue; }
+    if (bl.dates.includes(dateStr)) { result[dateStr] = false; continue; }
+
+    const blockedSlots = bl.slots[dateStr] || [];
+    const dayBookings  = allBookings.filter(b => b.date === dateStr);
+
+    result[dateStr] = slots.some(t => {
+      const [h, min] = t.split(':').map(Number);
+      const slotDt = new Date(y, m - 1, d, h, min);
+      const hoursLeft = (slotDt - now) / 3_600_000;
+      const occupied  = !!findOccupyingBooking(t, dayBookings, cfg.services);
+      const forward   = wouldConflictForward(t, requestedDur, dayBookings);
+      return !occupied && !forward && !blockedSlots.includes(t) && hoursLeft >= minAdvanceHours;
+    });
+  }
+
+  res.json(result);
+});
+
 /* ── Crear reserva ────────────────────────────────────────────────────────── */
 app.post('/api/bookings', bookingLimiter, async (req, res) => {
   const { name, email, phone, date, time, service: serviceKey } = req.body;

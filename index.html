@@ -593,6 +593,30 @@
     .bk-success-s { font-size:.88rem;color:var(--g-mid);line-height:1.75; }
     .bk-hidden { display:none!important; }
 
+    /* ── Calendario personalizado ─────────────────────────────────────── */
+    .bk-cal { margin-top:4px; }
+    .bk-cal-hdr { display:flex;align-items:center;justify-content:space-between;margin-bottom:10px; }
+    .bk-cal-nav { background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:7px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--white);font-size:1.15rem;line-height:1;transition:background .2s;flex-shrink:0; }
+    .bk-cal-nav:hover:not(:disabled) { background:rgba(255,255,255,.16); }
+    .bk-cal-nav:disabled { opacity:.22;cursor:default; }
+    .bk-cal-lbl { font-size:.86rem;font-weight:600;color:var(--white);text-transform:capitalize;text-align:center;flex:1; }
+    .bk-cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:2px; }
+    .bk-cal-dow { text-align:center;font-size:.6rem;font-weight:600;letter-spacing:.05em;color:rgba(255,255,255,.28);padding:5px 0 3px;text-transform:uppercase; }
+    .bk-cal-day { aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:7px;font-size:.78rem;cursor:default;transition:all .15s;position:relative;border:1px solid transparent;gap:2px;color:rgba(255,255,255,.2); }
+    .bk-cal-day.empty,.bk-cal-day.past { opacity:.2;pointer-events:none; }
+    .bk-cal-day.loading { color:rgba(255,255,255,.22);animation:calPulse 1.4s ease-in-out infinite; }
+    .bk-cal-day.unavailable { color:rgba(255,255,255,.18);cursor:not-allowed; }
+    .bk-cal-day.available { color:var(--white);cursor:pointer; }
+    .bk-cal-day.available:hover { background:rgba(26,107,74,.18);border-color:rgba(26,107,74,.35); }
+    .bk-cal-day.available .bk-cal-dot { opacity:.75; }
+    .bk-cal-day.selected { background:var(--emerald)!important;border-color:var(--emerald)!important;color:#fff!important;font-weight:700; }
+    .bk-cal-day.selected .bk-cal-dot { background:#fff!important;opacity:1!important; }
+    .bk-cal-dot { display:block;width:3px;height:3px;border-radius:50%;background:var(--emerald);opacity:0;transition:opacity .15s; }
+    .bk-cal-hint { text-align:center;font-size:.72rem;color:rgba(255,255,255,.28);padding:6px 0 0;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:5px; }
+    .bk-cal-hint span { display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--emerald);opacity:.7; }
+    .bk-cal-spinner { text-align:center;font-size:.72rem;color:rgba(255,255,255,.3);padding:4px 0;margin-top:3px; }
+    @keyframes calPulse { 0%,100%{opacity:.2} 50%{opacity:.5} }
+
     @media (max-width: 480px) {
       :root { --py: 52px; }
       .hero-photo-col { max-width: 340px; }
@@ -1028,8 +1052,18 @@
           <input class="bk-input" type="tel" id="bk-phone" placeholder="+56 9 1234 5678" required>
         </div>
         <div class="bk-field">
-          <label class="bk-label" for="bk-date">Fecha de la sesión</label>
-          <input class="bk-input" type="date" id="bk-date" required>
+          <label class="bk-label">Fecha de la sesión</label>
+          <div class="bk-cal">
+            <div class="bk-cal-hdr">
+              <button type="button" class="bk-cal-nav" id="bk-cal-prev" onclick="calNav(-1)">‹</button>
+              <span class="bk-cal-lbl" id="bk-cal-month"></span>
+              <button type="button" class="bk-cal-nav" id="bk-cal-next" onclick="calNav(1)">›</button>
+            </div>
+            <div class="bk-cal-grid" id="bk-cal-grid"></div>
+            <div class="bk-cal-spinner bk-hidden" id="bk-cal-loading">Cargando disponibilidad…</div>
+            <div class="bk-cal-hint"><span></span> Días con horas disponibles</div>
+          </div>
+          <input type="hidden" id="bk-date">
         </div>
         <div class="bk-field">
           <label class="bk-label">Horario disponible</label>
@@ -1229,19 +1263,11 @@
     overlay.style.display = 'flex';
     console.log('[BOSSKIN] overlay display:', overlay.style.display, '| classList:', overlay.className);
     document.body.style.overflow = 'hidden';
-    const today  = new Date().toISOString().split('T')[0];
-    const maxDt  = new Date(); maxDt.setDate(maxDt.getDate() + 60);
-    const maxDay = maxDt.toISOString().split('T')[0];
-    const dateEl = document.getElementById('bk-date');
-    const prevDate = dateEl.value;
-    dateEl.min = today;
-    dateEl.max = maxDay;
-    dateEl.value = '';
+    document.getElementById('bk-date').value = '';
     document.getElementById('bk-time').value = '';
     document.getElementById('booking-form').reset();
     renderSlots(null);
-    // Si ya había una fecha elegida, recargar slots con el nuevo servicio
-    if (prevDate) loadSlots(prevDate);
+    calInit();
     document.getElementById('bk-form-wrap').classList.remove('bk-hidden');
     document.getElementById('bk-success').classList.add('bk-hidden');
   }
@@ -1292,18 +1318,89 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('bk-date').addEventListener('change', async function() {
-      document.getElementById('bk-time').value = '';
-      document.getElementById('bk-slots').innerHTML = '<span class="bk-slot-none">Cargando horarios…</span>';
-      try {
-        const r = await fetch(`/api/slots?date=${this.value}&service=${currentService.key}`);
-        renderSlots(await r.json());
-      } catch (_) {
-        document.getElementById('bk-slots').innerHTML = '<span class="bk-slot-none">Error al cargar horarios</span>';
+  /* ── Calendario personalizado ────────────────────────────────────────── */
+  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DIAS  = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+  const calState = { year:0, month:0, selected:null, avail:{}, loading:false };
+
+  function calInit() {
+    const n = new Date();
+    calState.year = n.getFullYear(); calState.month = n.getMonth();
+    calState.selected = null; calState.avail = {}; calState.loading = false;
+    document.getElementById('bk-date').value = '';
+    renderCalendar();
+    loadMonthAvail();
+  }
+
+  function calNav(dir) {
+    let m = calState.month + dir, y = calState.year;
+    if (m < 0) { m = 11; y--; }
+    if (m > 11) { m = 0; y++; }
+    calState.month = m; calState.year = y; calState.avail = {};
+    renderCalendar();
+    loadMonthAvail();
+  }
+
+  async function loadMonthAvail() {
+    const { year, month } = calState;
+    calState.loading = true;
+    document.getElementById('bk-cal-loading').classList.remove('bk-hidden');
+    try {
+      const r = await fetch(`/api/available-days?year=${year}&month=${month+1}&service=${currentService.key}`);
+      if (r.ok && calState.year === year && calState.month === month) {
+        calState.avail = await r.json();
+        calState.loading = false;
+        renderCalendar();
       }
-    });
-  });
+    } catch(_) { calState.loading = false; }
+    if (calState.year === year && calState.month === month)
+      document.getElementById('bk-cal-loading').classList.add('bk-hidden');
+  }
+
+  function renderCalendar() {
+    const { year, month, selected, avail, loading } = calState;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const maxDt = new Date(today); maxDt.setDate(maxDt.getDate() + 60);
+
+    document.getElementById('bk-cal-month').textContent = `${MESES[month]} ${year}`;
+    const thisMo = new Date(year, month, 1);
+    const nowMo  = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('bk-cal-prev').disabled = thisMo <= nowMo;
+    document.getElementById('bk-cal-next').disabled = thisMo >= maxDt;
+
+    let startDow = new Date(year, month, 1).getDay();
+    startDow = (startDow + 6) % 7; // lunes = 0
+    const dim = new Date(year, month + 1, 0).getDate();
+
+    let html = DIAS.map(d => `<div class="bk-cal-dow">${d}</div>`).join('');
+    for (let i = 0; i < startDow; i++) html += `<div class="bk-cal-day empty"></div>`;
+
+    for (let d = 1; d <= dim; d++) {
+      const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dt = new Date(year, month, d);
+      let cls = 'bk-cal-day', oc = '';
+      if (dt < today || dt > maxDt) {
+        cls += ' past';
+      } else if (loading || !Object.keys(avail).length) {
+        cls += ' loading';
+      } else if (avail[ds]) {
+        cls += ' available' + (selected === ds ? ' selected' : '');
+        oc = `onclick="calSelectDay('${ds}')"`;
+      } else {
+        cls += ' unavailable';
+      }
+      html += `<div class="${cls}" ${oc}>${d}<span class="bk-cal-dot"></span></div>`;
+    }
+    document.getElementById('bk-cal-grid').innerHTML = html;
+  }
+
+  function calSelectDay(ds) {
+    if (calState.selected === ds) return;
+    calState.selected = ds;
+    document.getElementById('bk-date').value = ds;
+    renderCalendar();
+    loadSlots(ds);
+  }
 
   let pendingBooking = null;
 
