@@ -106,6 +106,24 @@ function getBookings() { return readDB().bookings; }
 function updateBooking(id, changes) { const db = readDB(); db.bookings = db.bookings.map(b => b.id===id ? {...b,...changes} : b); writeDB(db); }
 function deleteBooking(id) { const db = readDB(); db.bookings = db.bookings.filter(b => b.id!==id); writeDB(db); }
 
+/* ── TTL de reservas pendientes sin pago ─────────────────────────────────────
+   Reservas en estado 'pendiente' expiran 30 min después de crearse.
+   Si MP reporta pago en proceso (efectivo/transferencia), el TTL se extiende
+   a 48 h. Reservas antiguas sin expires_at heredan 30 min desde created_at. */
+const PENDING_TTL_MS    = 30 * 60_000;       // 30 minutos (pago con tarjeta)
+const MP_PENDING_TTL_MS = 48 * 3_600_000;    // 48 horas  (efectivo/transferencia)
+
+function getPendingExpiry(b) {
+  if (b.expires_at) return new Date(b.expires_at);
+  // Retrocompatibilidad: reservas sin expires_at usan created_at + 30 min
+  return new Date(new Date(b.created_at).getTime() + PENDING_TTL_MS);
+}
+
+function isPendingExpired(b) {
+  if (b.status !== 'pendiente') return false;
+  return getPendingExpiry(b) < new Date();
+}
+
 /* ── Respaldos de reservas ──────────────────────────────────────────────────
    Guarda copias en DATA_DIR/backups y conserva las últimas 14. Protege ante
    corrupción del archivo. (La persistencia entre deploys depende del volumen
@@ -483,7 +501,7 @@ app.get('/api/slots', slotLimiter, (req, res) => {
   if (bl.dates.includes(date)) return res.json(slots.map(t => ({ time: t, available: false })));
 
   const blockedSlots = bl.slots[date] || [];
-  const dayBookings  = getBookings().filter(b => b.date === date && b.status !== 'cancelado');
+  const dayBookings  = getBookings().filter(b => b.date === date && b.status !== 'cancelado' && !isPendingExpired(b));
   const now          = new Date();
 
   res.json(slots.map(t => {
@@ -508,7 +526,7 @@ app.get('/api/available-days', calendarLimiter, (req, res) => {
   const requestedDur = requestedSvc?.duration || 0;
 
   const bl = readBlocked();
-  const allBookings = getBookings().filter(b => b.status !== 'cancelado');
+  const allBookings = getBookings().filter(b => b.status !== 'cancelado' && !isPendingExpired(b));
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + maxAdvanceDays);
   const now = new Date();
@@ -583,7 +601,8 @@ app.post('/api/bookings', bookingLimiter, async (req, res) => {
       } catch(mpErr) { console.error('MP error:', mpErr.message); }
 
       const db = readDB();
-      db.bookings.push({ id, name:name.trim(), email:email.trim(), phone:phone.trim(), date, time, service:svc.name, price:svc.price, status:'pendiente', mp_preference_id:mpPrefId, cancel_token:cancelToken, created_at:createdAt });
+      const expiresAt = new Date(Date.now() + PENDING_TTL_MS).toISOString();
+      db.bookings.push({ id, name:name.trim(), email:email.trim(), phone:phone.trim(), date, time, service:svc.name, price:svc.price, status:'pendiente', mp_preference_id:mpPrefId, cancel_token:cancelToken, created_at:createdAt, expires_at:expiresAt });
       writeDB(db);
       return { id, paymentUrl };
     });
@@ -623,6 +642,20 @@ app.post('/api/webhook', (req, res) => {
     try {
       const paymentApi = new Payment(mpClient);
       const payment    = await paymentApi.get({ id: data.id });
+
+      // Pago en proceso (efectivo, transferencia bancaria): extender TTL a 48h
+      if (payment.status === 'pending') {
+        const bk = getBookings().find(b => b.id === payment.external_reference && b.status === 'pendiente');
+        if (bk) {
+          await withLock(async () => updateBooking(payment.external_reference, {
+            expires_at:     new Date(Date.now() + MP_PENDING_TTL_MS).toISOString(),
+            payment_status: 'mp_pending',
+          }));
+          console.log(`⏳ Pago en proceso (MP pending) para reserva: ${payment.external_reference}`);
+        }
+        return;
+      }
+
       if (payment.status !== 'approved') return;
       const booking = getBookings().find(b => b.id === payment.external_reference && b.status === 'pendiente');
       if (!booking) return;
@@ -815,7 +848,7 @@ app.get('/api/admin/schedule/:date', adminLimiter, adminAuth, (req, res) => {
   if (!DATE_RE.test(date)) return res.status(400).json({ error:'Fecha inválida' });
   const cfg          = readConfig();
   const bl           = readBlocked();
-  const dayBookings  = getBookings().filter(b => b.date === date && b.status !== 'cancelado');
+  const dayBookings  = getBookings().filter(b => b.date === date && b.status !== 'cancelado' && !isPendingExpired(b));
   const blockedSlots = bl.slots[date] || [];
   const fullBlocked  = bl.dates.includes(date);
 
@@ -896,13 +929,39 @@ function calToken() {
   const secret = process.env.CALENDAR_SECRET || (process.env.ADMIN_PASSWORD || '') + '_cal_bosskin_2025';
   return crypto.createHmac('sha256', secret).update('bosskin-calendar-v2').digest('hex').slice(0, 32);
 }
+// Retorna fecha/hora local como string ICS sin sufijo Z (se usa con TZID=America/Santiago)
 function toICSDate(date, time, offsetMins=0) {
   const [y,m,d] = date.split('-').map(Number);
   const [h,min] = time.split(':').map(Number);
-  const dt = new Date(Date.UTC(y,m-1,d,h,min+offsetMins));
-  return dt.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const totalMin = h * 60 + min + offsetMins;
+  const hh = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return `${y}${pad(m)}${pad(d)}T${pad(hh)}${pad(mm)}00`;
 }
 function escapeICS(str) { return String(str).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+
+// VTIMEZONE requerido por Apple Calendar para respetar el TZID en los eventos
+const VTIMEZONE_SANTIAGO = [
+  'BEGIN:VTIMEZONE',
+  'TZID:America/Santiago',
+  'X-LIC-LOCATION:America/Santiago',
+  'BEGIN:DAYLIGHT',
+  'TZOFFSETFROM:-0400',
+  'TZOFFSETTO:-0300',
+  'TZNAME:CLST',
+  'DTSTART:19701011T000000',
+  'RRULE:FREQ=YEARLY;BYDAY=2SA;BYMONTH=10',
+  'END:DAYLIGHT',
+  'BEGIN:STANDARD',
+  'TZOFFSETFROM:-0300',
+  'TZOFFSETTO:-0400',
+  'TZNAME:CLT',
+  'DTSTART:19700411T000000',
+  'RRULE:FREQ=YEARLY;BYDAY=2SA;BYMONTH=4',
+  'END:STANDARD',
+  'END:VTIMEZONE',
+].join('\r\n');
 
 app.get('/api/calendar.ics', calendarLimiter, (req, res) => {
   if (req.query.token !== calToken()) return res.status(401).send('No autorizado');
@@ -911,14 +970,36 @@ app.get('/api/calendar.ics', calendarLimiter, (req, res) => {
   const bookings = getBookings().filter(b => b.status === 'confirmado');
   const events   = bookings.map(b => {
     const dur   = durMap[b.service] || 60;
-    return ['BEGIN:VEVENT',`UID:${b.id}@bosskinlab.com`,`DTSTART:${toICSDate(b.date,b.time)}`,`DTEND:${toICSDate(b.date,b.time,dur)}`,`SUMMARY:${escapeICS(b.service)} — ${escapeICS(b.name)}`,`DESCRIPTION:${escapeICS(b.name)}\\nEmail: ${escapeICS(b.email)}\\nTeléfono: ${escapeICS(b.phone)}`,`LOCATION:Videollamada`,`STATUS:CONFIRMED`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,'END:VEVENT'].join('\r\n');
+    return ['BEGIN:VEVENT',`UID:${b.id}@bosskinlab.com`,`DTSTART;TZID=America/Santiago:${toICSDate(b.date,b.time)}`,`DTEND;TZID=America/Santiago:${toICSDate(b.date,b.time,dur)}`,`SUMMARY:${escapeICS(b.service)} — ${escapeICS(b.name)}`,`DESCRIPTION:${escapeICS(b.name)}\\nEmail: ${escapeICS(b.email)}\\nTeléfono: ${escapeICS(b.phone)}`,`LOCATION:Videollamada`,`STATUS:CONFIRMED`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,'END:VEVENT'].join('\r\n');
   }).join('\r\n');
-  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//BOSSKIN//Reservas//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:BOSSKIN Reservas','X-WR-TIMEZONE:America/Santiago','REFRESH-INTERVAL;VALUE=DURATION:PT1H',events,'END:VCALENDAR'].join('\r\n');
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//BOSSKIN//Reservas//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:BOSSKIN Reservas','X-WR-TIMEZONE:America/Santiago','REFRESH-INTERVAL;VALUE=DURATION:PT1H', VTIMEZONE_SANTIAGO, events,'END:VCALENDAR'].join('\r\n');
   res.setHeader('Content-Type','text/calendar; charset=utf-8');
   res.setHeader('Content-Disposition','inline; filename="bosskin-reservas.ics"');
   res.send(ics);
 });
 app.get('/api/admin/calendar-url', adminLimiter, adminAuth, (req, res) => res.json({ url:`${BASE_URL}/api/calendar.ics?token=${calToken()}` }));
+
+/* ── Limpieza automática de reservas pendientes sin pago ─────────────────────
+   Cancela reservas cuyo expires_at ya pasó. Se ejecuta cada 5 minutos.
+   Reservas con payment_status='mp_pending' tienen TTL extendido a 48h y no
+   se cancelan aquí hasta que ese TTL también expire. */
+async function cleanExpiredPendingBookings() {
+  const db  = readDB();
+  const now = new Date();
+  let changed = false;
+
+  for (const b of db.bookings) {
+    if (b.status !== 'pendiente') continue;
+    if (getPendingExpiry(b) >= now) continue;
+    b.status        = 'cancelado';
+    b.cancelled_at  = now.toISOString();
+    b.cancel_reason = 'payment_timeout';
+    changed = true;
+    console.log(`⏱ Reserva expirada (sin pago): ${b.id} — ${b.date} ${b.time}`);
+  }
+
+  if (changed) writeDB(db);
+}
 
 /* ── 404 ──────────────────────────────────────────────────────────────────── */
 app.use('/api', (req, res) => res.status(404).json({ error:'Endpoint no encontrado' }));
@@ -941,6 +1022,10 @@ const server = app.listen(PORT, () => {
   // Recordatorios 24h antes: revisar cada hora
   setInterval(sendReminders, 3_600_000).unref();
   setTimeout(sendReminders, 30_000).unref(); // primera pasada a los 30s
+
+  // Cancelar reservas pendientes sin pago: revisar cada 5 minutos
+  setInterval(cleanExpiredPendingBookings, 5 * 60_000).unref();
+  setTimeout(cleanExpiredPendingBookings, 15_000).unref(); // primera pasada a los 15s
 
   // Volcar analítica a disco cada 60s
   setInterval(saveAnalytics, 60_000).unref();

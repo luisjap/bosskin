@@ -1323,6 +1323,20 @@
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  // Retorna texto con tiempo restante para que expire una reserva pendiente, o '' si ya expiró
+  function pendingTimeLeft(b) {
+    if (b.status !== 'pendiente') return '';
+    const expiry = b.expires_at
+      ? new Date(b.expires_at)
+      : new Date(new Date(b.created_at).getTime() + 30 * 60 * 1000);
+    const msLeft = expiry - Date.now();
+    if (msLeft <= 0) return 'Expira ya';
+    const minLeft = Math.ceil(msLeft / 60_000);
+    if (minLeft < 60) return `Expira en ${minLeft} min`;
+    const hLeft = Math.floor(minLeft / 60);
+    return hLeft >= 24 ? `Expira en ${Math.round(hLeft/24)}d` : `Expira en ${hLeft}h`;
+  }
+
   /* La cookie httpOnly la envía el navegador automáticamente — no se necesita header manual.
      apiFetch solo maneja el redirect a login en caso de 401. */
   async function apiFetch(url, opts = {}) {
@@ -1422,7 +1436,8 @@
       const d   = new Date(b.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
       const ag  = new Date(b.created_at).toLocaleDateString('es-CL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
       const ok  = b.status === 'confirmado';
-      const badge      = ok ? `<span class="badge-conf">✓ Confirmado</span>` : `<span class="badge-pend">⏳ Pendiente</span>`;
+      const timeLeft   = pendingTimeLeft(b);
+      const badge      = ok ? `<span class="badge-conf">✓ Confirmado</span>` : `<span class="badge-pend" title="${timeLeft}">⏳ ${timeLeft || 'Pendiente'}</span>`;
       const confirmBtn  = ok ? `<button class="btn-confirm" onclick="resendEmail('${b.id}')" title="Reenviar email de confirmación">Reenviar email</button>` : `<button class="btn-confirm" onclick="confirmPayment('${b.id}','${esc(b.name)}','${b.date}','${b.time}')">Confirmar pago</button>`;
       return `<tr>
         <td class="td-name">${esc(b.name)}</td>
@@ -1595,9 +1610,10 @@
     const d       = new Date(b.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
     const isToday = b.date === today;
     const ok      = b.status === 'confirmado';
+    const mTimeLeft = pendingTimeLeft(b);
     const badge   = ok
       ? `<span class="badge-conf" style="font-size:.7rem;padding:3px 8px">✓ Pagado</span>`
-      : `<span class="badge-pend" style="font-size:.7rem;padding:3px 8px">⏳ Sin pago</span>`;
+      : `<span class="badge-pend" style="font-size:.7rem;padding:3px 8px">⏳ ${mTimeLeft || 'Sin pago'}</span>`;
     const dateLabel = isToday ? `<b style="color:var(--emerald-lt)">Hoy</b> · ${b.time} hrs` : `${d} · ${b.time} hrs`;
     const phone = b.phone.replace(/\s/g,'');
     const wspUrl = `https://wa.me/${phone.startsWith('+') ? phone.slice(1) : '56' + phone.replace(/^0/,'')}`;
@@ -2107,10 +2123,12 @@
       } else {
         pendEl.innerHTML = pending.slice(0,4).map(b => {
           const d = new Date(b.date+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+          const tl = pendingTimeLeft(b);
           return `<div class="dash-pend-card">
             <div style="flex:1">
               <div class="dash-pend-name">${esc(b.name)}</div>
               <div class="dash-pend-svc">${esc(b.service)}</div>
+              ${tl ? `<div style="font-size:.72rem;color:#f59e0b;margin-top:2px">⏱ ${tl}</div>` : ''}
             </div>
             <div>
               <div class="dash-pend-date">${d} · ${b.time}</div>
